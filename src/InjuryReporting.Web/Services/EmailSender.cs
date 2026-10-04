@@ -18,9 +18,8 @@ public class SmtpOptions
 }
 
 /// <summary>
-/// Sends mail via SMTP (STARTTLS). When no host is configured: in Development the message is written to
-/// the console so links can be followed; in any other environment sending fails loudly rather than
-/// silently dropping security email.
+/// Sends mail via SMTP (STARTTLS), e.g. the Amazon SES SMTP endpoint. When no host is configured: in
+/// Development the message is written to the console so links can be followed; elsewhere an error is logged.
 /// </summary>
 public class SmtpEmailSender : IAppEmailSender
 {
@@ -37,16 +36,26 @@ public class SmtpEmailSender : IAppEmailSender
     {
         if (string.IsNullOrWhiteSpace(_options.Host))
         {
-            if (!_env.IsDevelopment())
-                throw new InvalidOperationException("Smtp:Host is not configured; cannot send email.");
-            _log.LogWarning("DEV EMAIL (no SMTP configured)\nTo: {To}\nSubject: {Subject}\n{Body}", toEmail, subject, htmlBody);
+            if (_env.IsDevelopment())
+                _log.LogWarning("DEV EMAIL (no SMTP configured)\nTo: {To}\nSubject: {Subject}\n{Body}", toEmail, subject, htmlBody);
+            else
+                _log.LogError("Email '{Subject}' was not sent: Smtp:Host is not configured.", subject);
             return;
         }
 
-        using var client = new SmtpClient(_options.Host, _options.Port) { EnableSsl = true };
-        if (!string.IsNullOrEmpty(_options.Username))
-            client.Credentials = new NetworkCredential(_options.Username, _options.Password);
-        using var msg = new MailMessage(_options.From, toEmail, subject, htmlBody) { IsBodyHtml = true };
-        await client.SendMailAsync(msg);
+        // Delivery failures are logged, never thrown. Callers send mail only for accounts that exist, so a
+        // thrown error would make the response differ for real vs unknown addresses (account enumeration).
+        try
+        {
+            using var client = new SmtpClient(_options.Host, _options.Port) { EnableSsl = true };
+            if (!string.IsNullOrEmpty(_options.Username))
+                client.Credentials = new NetworkCredential(_options.Username, _options.Password);
+            using var msg = new MailMessage(_options.From, toEmail, subject, htmlBody) { IsBodyHtml = true };
+            await client.SendMailAsync(msg);
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Email '{Subject}' could not be sent via {Host}.", subject, _options.Host);
+        }
     }
 }
