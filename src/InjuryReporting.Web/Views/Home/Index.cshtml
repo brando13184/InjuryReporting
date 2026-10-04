@@ -1,0 +1,42 @@
+@{
+    ViewData["Title"] = "Home";
+}
+<div class="hero p-4 p-md-5 mb-4">
+    <h1 class="display-6 fw-semibold">SCA Injury Reporting</h1>
+    <p class="lead mb-4">
+        Report injuries from Armored Combat, Rapier, Equestrian, Archery and Thrown Weapons so the SCA can
+        see what is happening across kingdoms and make the game safer.
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary btn-lg" asp-controller="Reports" asp-action="Create">Report an injury</a>
+        @if (User.Identity?.IsAuthenticated != true)
+        {
+            <a class="btn btn-outline-primary btn-lg" asp-controller="Account" asp-action="Register">Create an account</a>
+            <a class="btn btn-outline-secondary btn-lg" asp-controller="Account" asp-action="Login">Sign in</a>
+        }
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h5">Anonymous or registered</h2>
+            <p class="mb-0">You do not need an account to report. Registered users can keep track of their own
+            reports, and may still choose to submit any single report anonymously.</p>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h5">Private by design</h2>
+            <p class="mb-0">Reports are handled as protected health information: encrypted, access-logged, and
+            never shown to anyone outside the SCA safety review team. Please leave names out of the narrative.</p>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h5">One incident, counted once</h2>
+            <p class="mb-0">When several people report the same incident, reviewers combine the reports so
+            the safety statistics never count it twice.</p>
+        </div></div>
+    </div>
+</div>

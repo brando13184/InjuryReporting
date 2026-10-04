@@ -1,0 +1,25 @@
+@model MergeModel
+@{ ViewData["Title"] = "Merge incidents"; }
+<div class="row justify-content-center"><div class="col-lg-9">
+    <h1 class="h3 mb-2">Merge incidents</h1>
+    <p class="text-muted">Choose the incident to keep. All reports from the others move to it, and the others are retired (they stay visible under "Merged" but are excluded from analytics). The highest severity is kept.</p>
+    <form asp-action="Merge" method="post">
+        @foreach (var id in Model.Ids) { <input type="hidden" name="Ids" value="@id" /> }
+        <div class="table-responsive"><table class="table bg-white align-middle">
+            <thead><tr><th>Keep</th><th>Date</th><th>Discipline</th><th>Type</th><th>Severity</th><th>Event</th><th class="text-end">Reports</th></tr></thead>
+            <tbody>
+            @foreach (var c in Model.Candidates)
+            {
+                <tr>
+                    <td><input type="radio" class="form-check-input" name="TargetId" value="@c.Id" aria-label="Keep this incident" /></td>
+                    <td><a asp-action="Details" asp-route-id="@c.Id">@c.InjuryDate.ToString("yyyy-MM-dd")</a></td>
+                    <td>@c.Discipline</td><td>@c.InjuryType</td><td>@c.Severity</td><td>@c.EventName (@c.EventKingdom)</td>
+                    <td class="text-end">@c.ReportCount</td>
+                </tr>
+            }
+            </tbody>
+        </table></div>
+        <button type="submit" class="btn btn-primary">Merge</button>
+        <a class="btn btn-link" asp-action="Index" asp-route-status="all">Cancel</a>
+    </form>
+</div></div>

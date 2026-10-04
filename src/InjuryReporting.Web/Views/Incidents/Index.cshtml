@@ -1,0 +1,75 @@
+@model IncidentListModel
+@{
+    ViewData["Title"] = "Incidents";
+    var f = Model.Filter;
+    var status = f.Status ?? "review";
+    string PageUrl(int p) => Url.Action("Index", new { f.Status, f.DisciplineId, f.EventKingdomId, f.From, f.To, f.Q, page = p })!;
+}
+<h1 class="h3 mb-3">Incidents</h1>
+
+<form method="get" asp-action="Index" class="card card-body mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label small">Show</label>
+            <select name="Status" class="form-select form-select-sm">
+                <option value="review" selected="@(status == "review")">Needs review</option>
+                <option value="open" selected="@(status == "open")">Open</option>
+                <option value="reviewed" selected="@(status == "reviewed")">Reviewed</option>
+                <option value="all" selected="@(status == "all")">All active</option>
+                <option value="merged" selected="@(status == "merged")">Merged (retired)</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Discipline</label>
+            <select name="DisciplineId" class="form-select form-select-sm">
+                <option value="">All</option>
+                @foreach (var o in Model.Lookups.Disciplines) { <option value="@o.Value" selected="@(o.Value == f.DisciplineId?.ToString())">@o.Text</option> }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Event kingdom</label>
+            <select name="EventKingdomId" class="form-select form-select-sm">
+                <option value="">All</option>
+                @foreach (var o in Model.Lookups.Kingdoms) { <option value="@o.Value" selected="@(o.Value == f.EventKingdomId?.ToString())">@o.Text</option> }
+            </select>
+        </div>
+        <div class="col-md-2"><label class="form-label small">From</label><input type="date" name="From" value="@f.From?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></div>
+        <div class="col-md-2"><label class="form-label small">To</label><input type="date" name="To" value="@f.To?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></div>
+        <div class="col-md-2"><label class="form-label small">Event name</label><input name="Q" value="@f.Q" class="form-control form-control-sm" /></div>
+        <div class="col-12"><button class="btn btn-primary btn-sm" type="submit">Filter</button>
+            <a class="btn btn-link btn-sm" asp-action="Index">Reset</a></div>
+    </div>
+</form>
+
+<form method="get" asp-action="Merge">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-muted small">@Model.Total incident(s)</span>
+        <button type="submit" class="btn btn-outline-primary btn-sm">Merge selected…</button>
+    </div>
+    <div class="table-responsive"><table class="table table-hover bg-white align-middle table-xs">
+        <thead><tr><th></th><th>Date</th><th>Discipline</th><th>Type</th><th>Severity</th><th>Event</th><th>Kingdom</th><th class="text-end">Reports</th><th>Status</th></tr></thead>
+        <tbody>
+        @foreach (var r in Model.Rows)
+        {
+            <tr>
+                <td>@if (r.Status != IncidentStatus.Retired) { <input type="checkbox" class="form-check-input" name="ids" value="@r.Id" aria-label="Select incident" /> }</td>
+                <td><a asp-action="Details" asp-route-id="@r.Id">@r.InjuryDate.ToString("yyyy-MM-dd")</a></td>
+                <td>@r.Discipline</td>
+                <td>@r.InjuryType</td>
+                <td>@r.Severity</td>
+                <td>@r.EventName</td>
+                <td>@r.EventKingdom</td>
+                <td class="text-end">@r.ReportCount</td>
+                <td>
+                    @if (r.Status == IncidentStatus.Retired) { <span class="badge text-bg-secondary">Merged</span> }
+                    else if (r.NeedsReview) { <span class="badge text-bg-warning">Needs review</span> }
+                    else if (r.Status == IncidentStatus.Reviewed) { <span class="badge text-bg-success">Reviewed</span> }
+                    else { <span class="badge text-bg-light border">Open</span> }
+                </td>
+            </tr>
+        }
+        @if (Model.Rows.Count == 0) { <tr><td colspan="9" class="text-center text-muted py-4">Nothing here.</td></tr> }
+        </tbody>
+    </table></div>
+</form>
+<partial name="_Pager" model="new PagerModel { Page = f.Page, PageSize = Model.PageSize, Total = Model.Total, UrlForPage = PageUrl }" />

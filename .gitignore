@@ -1,0 +1,8 @@
+bin/
+obj/
+.vs/
+*.user
+*.pfx
+*.p12
+secrets.json
+appsettings.Production.json

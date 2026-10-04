@@ -1,0 +1,31 @@
+@model UserListModel
+@{
+    ViewData["Title"] = "Users";
+    string PageUrl(int p) => Url.Action("Index", new { search = Model.Search, page = p })!;
+}
+<h1 class="h3 mb-3">Users</h1>
+<form method="get" asp-action="Index" class="row g-2 mb-3">
+    <div class="col-sm-6 col-md-4"><input name="search" value="@Model.Search" class="form-control" placeholder="Search email or name" /></div>
+    <div class="col-auto"><button class="btn btn-primary" type="submit">Search</button></div>
+</form>
+<div class="table-responsive"><table class="table table-hover bg-white align-middle table-xs">
+    <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Status</th><th>2FA</th><th>Joined</th></tr></thead>
+    <tbody>
+    @foreach (var u in Model.Rows)
+    {
+        <tr>
+            <td><a asp-action="Details" asp-route-id="@u.Id">@u.Email</a></td>
+            <td>@u.DisplayName</td>
+            <td>@u.Role</td>
+            <td>
+                @if (u.IsSuspended) { <span class="badge text-bg-danger">Suspended</span> }
+                else if (!u.EmailConfirmed) { <span class="badge text-bg-warning">Unconfirmed</span> }
+                else { <span class="badge text-bg-success">Active</span> }
+            </td>
+            <td>@(u.TwoFactor ? "On" : "Off")</td>
+            <td>@u.CreatedUtc.ToString("yyyy-MM-dd")</td>
+        </tr>
+    }
+    </tbody>
+</table></div>
+<partial name="_Pager" model="new PagerModel { Page = Model.Page, PageSize = Model.PageSize, Total = Model.Total, UrlForPage = PageUrl }" />

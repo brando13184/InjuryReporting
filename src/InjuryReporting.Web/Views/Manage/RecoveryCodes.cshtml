@@ -1,0 +1,15 @@
+@model List<string>
+@{ ViewData["Title"] = "Recovery codes"; }
+<div class="row justify-content-center"><div class="col-md-8 col-lg-6">
+    <div class="card"><div class="card-body p-4">
+        <h1 class="h4">Save your recovery codes</h1>
+        <div class="alert alert-warning">These are shown <strong>once</strong>. Store them somewhere safe (a password manager). Each code can be used one time if you lose your device.</div>
+        <div class="row g-2 mono fs-5 mb-3">
+            @foreach (var c in Model)
+            {
+                <div class="col-6">@c</div>
+            }
+        </div>
+        <a class="btn btn-primary" asp-action="Index">Done</a>
+    </div></div>
+</div></div>

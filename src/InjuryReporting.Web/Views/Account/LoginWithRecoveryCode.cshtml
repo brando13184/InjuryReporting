@@ -1,0 +1,19 @@
+@model RecoveryCodeLoginModel
+@{ ViewData["Title"] = "Recovery code"; }
+<div class="row justify-content-center"><div class="col-md-6 col-lg-5">
+    <div class="card"><div class="card-body p-4">
+        <h1 class="h4 mb-3">Sign in with a recovery code</h1>
+        <p>Each recovery code works once.</p>
+        <form asp-action="LoginWithRecoveryCode" method="post" novalidate>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div class="mb-3">
+                <label asp-for="RecoveryCode" class="form-label"></label>
+                <input asp-for="RecoveryCode" class="form-control" autocomplete="off" />
+                <span asp-validation-for="RecoveryCode" class="text-danger small"></span>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Sign in</button>
+        </form>
+    </div></div>
+</div></div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

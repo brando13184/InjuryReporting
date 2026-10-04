@@ -1,0 +1,32 @@
+@model List<MyReportRow>
+@{
+    ViewData["Title"] = "My reports";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">My reports</h1>
+    <a class="btn btn-primary" asp-action="Create">New report</a>
+</div>
+<p class="text-muted">Reports you filed while signed in and not anonymously. Anonymous reports can't be listed because they're not linked to you.</p>
+@if (Model.Count == 0)
+{
+    <div class="alert alert-light border">You haven't filed any reports under your account yet.</div>
+}
+else
+{
+    <div class="table-responsive"><table class="table table-hover bg-white align-middle">
+        <thead><tr><th>Injury date</th><th>Discipline</th><th>Type</th><th>Event</th><th>Submitted</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var r in Model)
+        {
+            <tr>
+                <td>@r.InjuryDate.ToString("yyyy-MM-dd")</td>
+                <td>@r.Discipline</td>
+                <td>@r.InjuryType</td>
+                <td>@r.EventName</td>
+                <td>@r.SubmittedUtc.ToString("yyyy-MM-dd")</td>
+                <td><a asp-action="Details" asp-route-id="@r.Id">View</a></td>
+            </tr>
+        }
+        </tbody>
+    </table></div>
+}

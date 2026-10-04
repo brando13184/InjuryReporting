@@ -1,0 +1,20 @@
+@model TwoFactorLoginModel
+@{ ViewData["Title"] = "Two-factor verification"; }
+<div class="row justify-content-center"><div class="col-md-6 col-lg-5">
+    <div class="card"><div class="card-body p-4">
+        <h1 class="h4 mb-3">Two-factor verification</h1>
+        <p>Enter the 6-digit code from your authenticator app.</p>
+        <form asp-action="LoginWith2fa" method="post" novalidate>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div class="mb-3">
+                <label asp-for="Code" class="form-label"></label>
+                <input asp-for="Code" class="form-control" autocomplete="one-time-code" inputmode="numeric" />
+                <span asp-validation-for="Code" class="text-danger small"></span>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Verify</button>
+        </form>
+        <p class="small mt-3 mb-0">Lost your device? <a asp-action="LoginWithRecoveryCode" asp-route-returnUrl="@Model.ReturnUrl">Use a recovery code</a></p>
+    </div></div>
+</div></div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

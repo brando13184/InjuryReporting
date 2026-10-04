@@ -1,0 +1,53 @@
+@model IncidentEditModel
+@{ ViewData["Title"] = "Edit incident"; }
+<div class="row justify-content-center"><div class="col-lg-8">
+    <h1 class="h3 mb-3">Edit incident</h1>
+    <p class="text-muted">Edits change the combined incident used in analytics. Original submitted reports are never altered.</p>
+    <form asp-action="Edit" method="post" novalidate>
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        <input type="hidden" asp-for="Id" />
+        <div class="card mb-3"><div class="card-body row g-3">
+            <div class="col-md-6">
+                <label asp-for="DisciplineId" class="form-label">Discipline</label>
+                <select asp-for="DisciplineId" asp-items="Model.Lookups.Disciplines" class="form-select"></select>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="InjuryTypeId" class="form-label">Injury type</label>
+                <select asp-for="InjuryTypeId" asp-items="Model.Lookups.InjuryTypes" class="form-select"></select>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Severity" class="form-label"></label>
+                <select asp-for="Severity" asp-items="Model.Lookups.Severities" class="form-select"></select>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="InjuryDate" class="form-label">Date of injury</label>
+                <input asp-for="InjuryDate" class="form-control" data-max-today="true" />
+                <span asp-validation-for="InjuryDate" class="text-danger small"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="EventName" class="form-label">Event name</label>
+                <input asp-for="EventName" class="form-control" maxlength="200" />
+                <span asp-validation-for="EventName" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="EventKingdomId" class="form-label">Kingdom of event</label>
+                <select asp-for="EventKingdomId" asp-items="Model.Lookups.Kingdoms" class="form-select"></select>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="InjuredKingdomId" class="form-label">Injured person's kingdom</label>
+                <select asp-for="InjuredKingdomId" asp-items="Model.Lookups.Kingdoms" class="form-select"><option value="">Non-member / unknown</option></select>
+            </div>
+            <div class="col-12">
+                <label asp-for="ReviewerNotes" class="form-label"></label>
+                <textarea asp-for="ReviewerNotes" class="form-control" rows="4" maxlength="2000"></textarea>
+            </div>
+            <div class="col-12 form-check ms-2">
+                <input asp-for="MarkReviewed" class="form-check-input" />
+                <label asp-for="MarkReviewed" class="form-check-label"></label>
+            </div>
+        </div></div>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a class="btn btn-link" asp-action="Details" asp-route-id="@Model.Id">Cancel</a>
+    </form>
+</div></div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

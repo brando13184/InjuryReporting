@@ -1,0 +1,86 @@
+@model AnalyticsPageModel
+@using Microsoft.AspNetCore.Html
+@{
+    ViewData["Title"] = "Analytics";
+    var r = Model.Result;
+    var f = Model.Filter;
+}
+@functions {
+    // Bars are <progress> elements so no inline style is needed (strict CSP).
+    IHtmlContent Bars(string title, List<Bucket> data)
+    {
+        var max = data.Count == 0 ? 1 : data.Max(b => b.Count);
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div class=\"card h-100\"><div class=\"card-header\">").Append(System.Net.WebUtility.HtmlEncode(title)).Append("</div><div class=\"card-body\">");
+        if (data.Count == 0) sb.Append("<span class=\"text-muted\">No data for this filter.</span>");
+        foreach (var b in data)
+        {
+            sb.Append("<div class=\"mb-2\"><div class=\"d-flex justify-content-between small\"><span>")
+              .Append(System.Net.WebUtility.HtmlEncode(b.Label)).Append("</span><strong>").Append(b.Count).Append("</strong></div>")
+              .Append("<progress class=\"bar\" max=\"").Append(max).Append("\" value=\"").Append(b.Count).Append("\"></progress></div>");
+        }
+        sb.Append("</div></div>");
+        return new HtmlString(sb.ToString());
+    }
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <h1 class="h3 mb-0">Analytics</h1>
+    <a class="btn btn-outline-primary btn-sm" asp-action="ExportCsv" asp-route-From="@f.From?.ToString("yyyy-MM-dd")" asp-route-To="@f.To?.ToString("yyyy-MM-dd")" asp-route-DisciplineId="@f.DisciplineId" asp-route-EventKingdomId="@f.EventKingdomId">Export de-identified CSV</a>
+</div>
+
+<form method="get" asp-action="Index" class="card card-body mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-3"><label class="form-label small">From</label><input type="date" name="From" value="@f.From?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></div>
+        <div class="col-md-3"><label class="form-label small">To</label><input type="date" name="To" value="@f.To?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></div>
+        <div class="col-md-2">
+            <label class="form-label small">Discipline</label>
+            <select name="DisciplineId" class="form-select form-select-sm">
+                <option value="">All</option>
+                @foreach (var o in Model.Lookups.Disciplines) { <option value="@o.Value" selected="@(o.Value == f.DisciplineId?.ToString())">@o.Text</option> }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Event kingdom</label>
+            <select name="EventKingdomId" class="form-select form-select-sm">
+                <option value="">All</option>
+                @foreach (var o in Model.Lookups.Kingdoms) { <option value="@o.Value" selected="@(o.Value == f.EventKingdomId?.ToString())">@o.Text</option> }
+            </select>
+        </div>
+        <div class="col-md-2"><button class="btn btn-primary btn-sm" type="submit">Apply</button> <a class="btn btn-link btn-sm" asp-action="Index">Reset</a></div>
+    </div>
+</form>
+
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3"><div class="card"><div class="card-body"><div class="stat-number">@r.Incidents</div><div class="text-muted small">Unique incidents</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="card"><div class="card-body"><div class="stat-number">@r.Reports</div><div class="text-muted small">Reports received</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="card"><div class="card-body"><div class="stat-number">@r.DuplicatesCombined</div><div class="text-muted small">Duplicates combined</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="card"><div class="card-body"><div class="stat-number">@r.NeedsReview</div><div class="text-muted small">Awaiting review</div></div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">@Bars("By discipline", r.ByDiscipline)</div>
+    <div class="col-md-6">@Bars("By injury type", r.ByInjuryType)</div>
+    <div class="col-md-6">@Bars("By severity", r.BySeverity)</div>
+    <div class="col-md-6">@Bars("By month of injury", r.ByMonth)</div>
+    <div class="col-md-6">@Bars("By kingdom where it occurred", r.ByEventKingdom)</div>
+    <div class="col-md-6">@Bars("By injured person's kingdom membership", r.ByInjuredKingdom)</div>
+</div>
+
+<div class="card">
+    <div class="card-header">Discipline &times; injury type</div>
+    <div class="table-responsive"><table class="table table-xs table-bordered mb-0 text-center align-middle">
+        <thead><tr><th class="text-start">Discipline</th>
+            @foreach (var c in r.CrossTabColumns) { <th>@c</th> }
+            <th>Total</th></tr></thead>
+        <tbody>
+        @foreach (var row in r.CrossTab)
+        {
+            <tr><th class="text-start">@row.Label</th>
+                @foreach (var n in row.Counts) { <td>@(n == 0 ? "–" : n.ToString())</td> }
+                <th>@row.Total</th></tr>
+        }
+        @if (r.CrossTab.Count == 0) { <tr><td colspan="@(r.CrossTabColumns.Count + 2)" class="text-muted py-3">No data for this filter.</td></tr> }
+        </tbody>
+    </table></div>
+</div>

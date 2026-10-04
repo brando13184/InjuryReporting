@@ -1,0 +1,12 @@
+@model bool
+@{ ViewData["Title"] = "Confirm email"; }
+@if (Model)
+{
+    <div class="alert alert-success">Your email address is confirmed. You can now sign in.</div>
+    <a class="btn btn-primary" asp-action="Login">Sign in</a>
+}
+else
+{
+    <div class="alert alert-danger">This confirmation link is invalid or has expired. Try signing in to receive a new one.</div>
+    <a class="btn btn-primary" asp-action="Login">Sign in</a>
+}

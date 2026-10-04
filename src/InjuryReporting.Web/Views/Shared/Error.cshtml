@@ -1,0 +1,12 @@
+@{
+    ViewData["Title"] = "Error";
+    var code = ViewData["Code"] as int?;
+}
+<h1 class="h3">@(code == 404 ? "Page not found" : code == 429 ? "Slow down a moment" : "Something went wrong")</h1>
+<p>
+    @if (code == 429) { <text>Too many requests were made from your connection. Please wait a while and try again.</text> }
+    else if (code == 404) { <text>We couldn't find that page.</text> }
+    else { <text>An error occurred while processing your request. No report data was lost or exposed.</text> }
+</p>
+<p class="text-muted small">Reference: <span class="mono">@ViewData["RequestId"]</span></p>
+<a class="btn btn-primary" asp-controller="Home" asp-action="Index">Back to home</a>

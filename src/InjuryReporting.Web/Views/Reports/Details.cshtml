@@ -1,0 +1,20 @@
+@model ReportDetailsModel
+@{
+    ViewData["Title"] = "My report";
+    var r = Model.Report;
+}
+<h1 class="h3 mb-3">Report details</h1>
+<div class="card mb-3"><div class="card-body">
+    <dl class="row mb-0">
+        <dt class="col-sm-4">Injury date</dt><dd class="col-sm-8">@r.InjuryDate.ToString("yyyy-MM-dd")</dd>
+        <dt class="col-sm-4">Discipline</dt><dd class="col-sm-8">@r.Discipline.Name</dd>
+        <dt class="col-sm-4">Injury type</dt><dd class="col-sm-8">@r.InjuryType.Name</dd>
+        <dt class="col-sm-4">Severity</dt><dd class="col-sm-8">@AnalyticsService.Pretty(r.Severity)</dd>
+        <dt class="col-sm-4">Event</dt><dd class="col-sm-8">@r.EventName</dd>
+        <dt class="col-sm-4">Kingdom of event</dt><dd class="col-sm-8">@r.EventKingdom.Name</dd>
+        <dt class="col-sm-4">Injured person's kingdom</dt><dd class="col-sm-8">@(r.InjuredKingdom?.Name ?? "Non-member / not sure")</dd>
+        <dt class="col-sm-4">Submitted</dt><dd class="col-sm-8">@r.SubmittedUtc.ToString("yyyy-MM-dd HH:mm") UTC</dd>
+        <dt class="col-sm-4">Narrative</dt><dd class="col-sm-8 narrative">@r.Narrative</dd>
+    </dl>
+</div></div>
+<a asp-action="Mine">&larr; My reports</a>

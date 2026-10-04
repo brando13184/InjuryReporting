@@ -1,0 +1,27 @@
+@model AuditListModel
+@{
+    ViewData["Title"] = "Audit log";
+    string PageUrl(int p) => Url.Action("Index", new { action = Model.Action, page = p })!;
+}
+<h1 class="h3 mb-3">Audit log</h1>
+<form method="get" asp-action="Index" class="row g-2 mb-3">
+    <div class="col-sm-6 col-md-4"><input name="action" value="@Model.Action" class="form-control" placeholder="Action prefix, e.g. login or user." /></div>
+    <div class="col-auto"><button class="btn btn-primary" type="submit">Filter</button></div>
+</form>
+<div class="table-responsive"><table class="table table-sm bg-white align-middle">
+    <thead><tr><th>Time (UTC)</th><th>Actor</th><th>Action</th><th>Entity</th><th>Detail</th><th>IP</th></tr></thead>
+    <tbody>
+    @foreach (var a in Model.Rows)
+    {
+        <tr>
+            <td class="text-nowrap">@a.TimestampUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+            <td>@(a.ActorEmail ?? "—")</td>
+            <td class="mono">@a.Action</td>
+            <td class="small">@a.EntityType @a.EntityId</td>
+            <td class="small">@a.Detail</td>
+            <td class="small">@a.IpAddress</td>
+        </tr>
+    }
+    </tbody>
+</table></div>
+<partial name="_Pager" model="new PagerModel { Page = Model.Page, PageSize = Model.PageSize, Total = Model.Total, UrlForPage = PageUrl }" />

@@ -1,0 +1,80 @@
+@model IncidentDetailsModel
+@{
+    ViewData["Title"] = "Incident";
+    var i = Model.Incident;
+    var retired = i.Status == IncidentStatus.Retired;
+}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <h1 class="h3 mb-0">Incident <span class="text-muted fs-6 mono">@i.Id.ToString()[..8]</span></h1>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary btn-sm" asp-action="Index">&larr; Back</a>
+        @if (!retired) { <a class="btn btn-primary btn-sm" asp-action="Edit" asp-route-id="@i.Id">Edit / review</a> }
+    </div>
+</div>
+
+@if (retired && Model.MergedInto != null)
+{
+    <div class="alert alert-secondary">This incident was merged into <a asp-action="Details" asp-route-id="@Model.MergedInto.Id">another incident</a>. Its reports now belong there.</div>
+}
+
+<div class="card mb-3"><div class="card-header">Combined incident record</div><div class="card-body">
+    <dl class="row mb-0">
+        <dt class="col-sm-3">Injury date</dt><dd class="col-sm-9">@i.InjuryDate.ToString("yyyy-MM-dd")</dd>
+        <dt class="col-sm-3">Discipline</dt><dd class="col-sm-9">@i.Discipline.Name</dd>
+        <dt class="col-sm-3">Injury type</dt><dd class="col-sm-9">@i.InjuryType.Name</dd>
+        <dt class="col-sm-3">Severity</dt><dd class="col-sm-9">@AnalyticsService.Pretty(i.Severity)</dd>
+        <dt class="col-sm-3">Event</dt><dd class="col-sm-9">@i.EventName</dd>
+        <dt class="col-sm-3">Kingdom of event</dt><dd class="col-sm-9">@i.EventKingdom.Name</dd>
+        <dt class="col-sm-3">Injured person's kingdom</dt><dd class="col-sm-9">@(i.InjuredKingdom?.Name ?? "Non-member / unknown")</dd>
+        <dt class="col-sm-3">Status</dt><dd class="col-sm-9">@(retired ? "Merged" : i.NeedsReview ? "Needs review" : i.Status.ToString())</dd>
+        @if (!string.IsNullOrEmpty(i.ReviewerNotes))
+        {
+            <dt class="col-sm-3">Reviewer notes</dt><dd class="col-sm-9 narrative">@i.ReviewerNotes</dd>
+        }
+    </dl>
+</div></div>
+
+@if (Model.PossibleDuplicates.Count > 0)
+{
+    <div class="card border-warning mb-3"><div class="card-header">Possible duplicates (same discipline, date, event and kingdom)</div>
+    <div class="table-responsive"><table class="table table-xs mb-0 align-middle">
+        <thead><tr><th>Type</th><th>Severity</th><th class="text-end">Reports</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var d in Model.PossibleDuplicates)
+        {
+            <tr>
+                <td>@d.InjuryType</td><td>@d.Severity</td><td class="text-end">@d.ReportCount</td>
+                <td class="text-end">
+                    <a asp-action="Details" asp-route-id="@d.Id" class="btn btn-sm btn-outline-secondary">View</a>
+                    <a href="@Url.Action("Merge", new { ids = new[] { i.Id, d.Id } })" class="btn btn-sm btn-outline-primary">Merge…</a>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table></div></div>
+}
+
+<h2 class="h5">Reports (@i.Reports.Count)</h2>
+@foreach (var r in i.Reports.OrderBy(r => r.SubmittedUtc))
+{
+    <div class="card mb-2"><div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between mb-2 small text-muted">
+            <span>
+                @(r.ReporterUserId == null ? "Anonymous" : "Registered: " + (r.Reporter?.Email ?? "removed account"))
+                &middot; submitted @r.SubmittedUtc.ToString("yyyy-MM-dd")@(r.ReporterUserId == null ? "" : r.SubmittedUtc.ToString(" HH:mm") + " UTC")
+                @if (r.AutoLinked) { <span class="badge text-bg-info ms-1">Auto-combined</span> }
+                @if (r.PossibleDuplicate) { <span class="badge text-bg-warning ms-1">Possible duplicate</span> }
+            </span>
+            @if (!retired && i.Reports.Count > 1)
+            {
+                <form asp-action="Split" method="post" class="d-inline">
+                    <input type="hidden" name="reportId" value="@r.Id" />
+                    <input type="hidden" name="incidentId" value="@i.Id" />
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Move to its own incident</button>
+                </form>
+            }
+        </div>
+        <p class="small mb-1">@r.InjuryType.Name &middot; @AnalyticsService.Pretty(r.Severity) &middot; @r.InjuryDate.ToString("yyyy-MM-dd")</p>
+        <p class="narrative mb-0">@r.Narrative</p>
+    </div></div>
+}

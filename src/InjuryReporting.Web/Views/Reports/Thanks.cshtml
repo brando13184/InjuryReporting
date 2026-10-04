@@ -1,0 +1,14 @@
+@{
+    ViewData["Title"] = "Report received";
+    var anon = TempData["Anonymous"] as bool? ?? true;
+}
+<div class="hero p-4 p-md-5">
+    <h1 class="h3">Thank you — your report was received.</h1>
+    <p>
+        @if (anon) { <text>It was submitted anonymously. Because nothing links it to you, it cannot be looked up again later.</text> }
+        else { <text>You can find it any time under <a asp-action="Mine">My reports</a>.</text> }
+    </p>
+    <p class="text-muted">If anyone needs urgent medical attention, contact local emergency services. This site is not monitored in real time.</p>
+    <a class="btn btn-primary" asp-action="Create">File another report</a>
+    <a class="btn btn-outline-secondary" asp-controller="Home" asp-action="Index">Home</a>
+</div>

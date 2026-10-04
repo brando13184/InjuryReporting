@@ -1,0 +1,95 @@
+@model ReportFormModel
+@{
+    ViewData["Title"] = "Report an injury";
+    var signedIn = User.Identity?.IsAuthenticated == true;
+}
+<div class="row justify-content-center">
+<div class="col-lg-8">
+    <h1 class="h3 mb-1">Report an injury</h1>
+    <p class="text-muted">
+        @if (signedIn) { <text>This report will be saved to your account unless you choose to submit it anonymously.</text> }
+        else { <text>You are reporting anonymously. Nothing that identifies you is stored.</text> }
+    </p>
+
+    <form asp-action="Create" method="post" novalidate>
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        <input type="hidden" asp-for="SubmissionToken" />
+        <div class="hp-field" aria-hidden="true">
+            <label for="Website">Leave this field empty</label>
+            <input asp-for="Website" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">What happened</div>
+            <div class="card-body row g-3">
+                <div class="col-md-6">
+                    <label asp-for="DisciplineId" class="form-label"></label>
+                    <select asp-for="DisciplineId" asp-items="Model.Lookups.Disciplines" class="form-select"><option value="">Select…</option></select>
+                    <span asp-validation-for="DisciplineId" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="InjuryTypeId" class="form-label"></label>
+                    <select asp-for="InjuryTypeId" asp-items="Model.Lookups.InjuryTypes" class="form-select"><option value="">Select…</option></select>
+                    <span asp-validation-for="InjuryTypeId" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Severity" class="form-label"></label>
+                    <select asp-for="Severity" asp-items="Model.Lookups.Severities" class="form-select"><option value="">Select…</option></select>
+                    <span asp-validation-for="Severity" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="InjuryDate" class="form-label"></label>
+                    <input asp-for="InjuryDate" class="form-control" data-max-today="true" />
+                    <span asp-validation-for="InjuryDate" class="text-danger small"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">Where</div>
+            <div class="card-body row g-3">
+                <div class="col-12">
+                    <label asp-for="EventName" class="form-label"></label>
+                    <input asp-for="EventName" class="form-control" maxlength="200" autocomplete="off" />
+                    <span asp-validation-for="EventName" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="EventKingdomId" class="form-label"></label>
+                    <select asp-for="EventKingdomId" asp-items="Model.Lookups.Kingdoms" class="form-select"><option value="">Select…</option></select>
+                    <span asp-validation-for="EventKingdomId" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="InjuredKingdomId" class="form-label"></label>
+                    <select asp-for="InjuredKingdomId" asp-items="Model.Lookups.Kingdoms" class="form-select"><option value="">Non-member / not sure</option></select>
+                    <div class="form-text">The kingdom in which the injured person holds SCA membership.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">Narrative</div>
+            <div class="card-body">
+                <label asp-for="Narrative" class="form-label"></label>
+                <textarea asp-for="Narrative" class="form-control" rows="5" maxlength="2000" data-counter="narrative-count"></textarea>
+                <div class="d-flex justify-content-between">
+                    <span asp-validation-for="Narrative" class="text-danger small"></span>
+                    <span id="narrative-count" class="form-text ms-auto"></span>
+                </div>
+                <div class="form-text">Briefly describe what happened and how. <strong>Please do not include names, phone numbers or membership numbers.</strong></div>
+            </div>
+        </div>
+
+        @if (signedIn)
+        {
+            <div class="form-check mb-3">
+                <input asp-for="SubmitAnonymously" class="form-check-input" />
+                <label asp-for="SubmitAnonymously" class="form-check-label"></label>
+            </div>
+        }
+
+        <button type="submit" class="btn btn-primary btn-lg">Submit report</button>
+    </form>
+</div>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

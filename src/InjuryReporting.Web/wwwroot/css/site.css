@@ -1,0 +1,69 @@
+/* Simple Bootstrap 5 theme: burgundy primary, warm neutral background. No inline styles are used
+   anywhere (the CSP forbids them), so everything dynamic is expressed with classes or elements. */
+:root {
+  --bs-primary: #7b1e2b;
+  --bs-primary-rgb: 123, 30, 43;
+  --bs-link-color: #7b1e2b;
+  --bs-link-color-rgb: 123, 30, 43;
+  --bs-link-hover-color: #5a1620;
+  --bs-link-hover-color-rgb: 90, 22, 32;
+  --bs-body-bg: #faf7f2;
+  --bs-body-font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --bs-border-radius: .5rem;
+}
+
+.btn-primary {
+  --bs-btn-bg: #7b1e2b;
+  --bs-btn-border-color: #7b1e2b;
+  --bs-btn-hover-bg: #5a1620;
+  --bs-btn-hover-border-color: #5a1620;
+  --bs-btn-active-bg: #4a121a;
+  --bs-btn-active-border-color: #4a121a;
+  --bs-btn-disabled-bg: #7b1e2b;
+  --bs-btn-disabled-border-color: #7b1e2b;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: #7b1e2b;
+  --bs-btn-border-color: #7b1e2b;
+  --bs-btn-hover-bg: #7b1e2b;
+  --bs-btn-hover-border-color: #7b1e2b;
+  --bs-btn-active-bg: #7b1e2b;
+  --bs-btn-active-border-color: #7b1e2b;
+}
+
+.form-control:focus, .form-select:focus, .form-check-input:focus {
+  border-color: #b5546a;
+  box-shadow: 0 0 0 .25rem rgba(123, 30, 43, .2);
+}
+.form-check-input:checked { background-color: #7b1e2b; border-color: #7b1e2b; }
+
+.navbar .btn-link.nav-link { text-decoration: none; }
+
+.card { border-color: #e6ddd0; }
+.card-header { background-color: #f2ebe0; font-weight: 600; }
+
+.hero { background: #fff; border: 1px solid #e6ddd0; border-radius: 1rem; }
+
+/* Honeypot field: kept off-screen rather than display:none so naive bots still fill it. */
+.hp-field { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+
+/* Horizontal bar charts built from <progress>, which needs no inline style. */
+progress.bar {
+  width: 100%;
+  height: .9rem;
+  border: 0;
+  border-radius: .45rem;
+  background: #eadfce;
+  accent-color: #7b1e2b;
+  appearance: none;
+  -webkit-appearance: none;
+}
+progress.bar::-webkit-progress-bar { background: #eadfce; border-radius: .45rem; }
+progress.bar::-webkit-progress-value { background: #7b1e2b; border-radius: .45rem; }
+progress.bar::-moz-progress-bar { background: #7b1e2b; border-radius: .45rem; }
+
+.stat-number { font-size: 2.25rem; font-weight: 700; color: #7b1e2b; line-height: 1; }
+.table-xs td, .table-xs th { padding: .35rem .5rem; font-size: .9rem; }
+.narrative { white-space: pre-wrap; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }

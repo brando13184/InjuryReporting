@@ -1,0 +1,41 @@
+@model TwoFactorSetupModel
+@{ ViewData["Title"] = "Two-factor authentication"; }
+<div class="row justify-content-center"><div class="col-lg-8">
+<h1 class="h3 mb-3">Two-factor authentication</h1>
+@if (Model.IsEnabled)
+{
+    <div class="card mb-3"><div class="card-body">
+        <p><span class="badge text-bg-success">On</span> Your account requires a code from your authenticator app at sign-in.
+        You have <strong>@Model.RecoveryCodesLeft</strong> recovery code(s) left.</p>
+        <form asp-action="ResetRecoveryCodes" method="post" class="mb-4">
+            <button type="submit" class="btn btn-outline-primary">Generate new recovery codes</button>
+        </form>
+        <form asp-action="DisableTwoFactor" method="post" class="row g-2 align-items-end">
+            <div class="col-sm-7">
+                <label for="CurrentPassword" class="form-label">Current password</label>
+                <input type="password" id="CurrentPassword" name="CurrentPassword" class="form-control" autocomplete="current-password" />
+            </div>
+            <div class="col-sm-5"><button type="submit" class="btn btn-outline-danger">Turn off</button></div>
+        </form>
+    </div></div>
+}
+else
+{
+    <div class="card"><div class="card-body">
+        <ol>
+            <li>Open an authenticator app (Microsoft Authenticator, Google Authenticator, 1Password, Authy…).</li>
+            <li>Add an account manually and enter this key:<br />
+                <span class="mono fs-5">@Model.SharedKey</span></li>
+            <li>Enter the 6-digit code the app shows to confirm setup.</li>
+        </ol>
+        <p class="small text-muted">Setup URI (for password managers): <span class="mono text-break">@Model.AuthenticatorUri</span></p>
+        <form asp-action="EnableTwoFactor" method="post" class="row g-2 align-items-end">
+            <div class="col-sm-6">
+                <label asp-for="Code" class="form-label"></label>
+                <input asp-for="Code" class="form-control" autocomplete="one-time-code" inputmode="numeric" />
+            </div>
+            <div class="col-sm-6"><button type="submit" class="btn btn-primary">Verify and turn on</button></div>
+        </form>
+    </div></div>
+}
+</div></div>

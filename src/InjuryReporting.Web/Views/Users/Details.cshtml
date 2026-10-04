@@ -1,0 +1,72 @@
+@model UserDetailsModel
+@{
+    ViewData["Title"] = "User";
+    var u = Model.User;
+}
+<div class="mb-3"><a asp-action="Index">&larr; Users</a></div>
+<h1 class="h3 mb-3">@u.Email</h1>
+
+<div class="row g-3">
+    <div class="col-lg-6"><div class="card h-100"><div class="card-header">Account</div><div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Name</dt><dd class="col-sm-8">@u.DisplayName</dd>
+            <dt class="col-sm-4">Role</dt><dd class="col-sm-8">@u.Role</dd>
+            <dt class="col-sm-4">Email confirmed</dt><dd class="col-sm-8">@(u.EmailConfirmed ? "Yes" : "No")</dd>
+            <dt class="col-sm-4">Two-factor</dt><dd class="col-sm-8">@(u.TwoFactor ? "On" : "Off")</dd>
+            <dt class="col-sm-4">Joined</dt><dd class="col-sm-8">@u.CreatedUtc.ToString("yyyy-MM-dd")</dd>
+            <dt class="col-sm-4">Status</dt>
+            <dd class="col-sm-8">
+                @if (u.IsSuspended) { <span class="badge text-bg-danger">Suspended</span> <span class="small d-block">@Model.SuspensionReason</span> }
+                else { <span class="badge text-bg-success">Active</span> }
+            </dd>
+        </dl>
+    </div></div></div>
+
+    <div class="col-lg-6">
+    @if (Model.IsSelf)
+    {
+        <div class="alert alert-info">This is your own account. Use <a asp-controller="Manage" asp-action="Index">My account</a> to change it.</div>
+    }
+    else
+    {
+        <div class="card mb-3"><div class="card-header">Moderation</div><div class="card-body">
+        @if (u.IsSuspended)
+        {
+            <form asp-action="Unsuspend" method="post">
+                <input type="hidden" name="id" value="@u.Id" />
+                <button type="submit" class="btn btn-success">Reinstate user</button>
+            </form>
+        }
+        else
+        {
+            <form asp-action="Suspend" method="post">
+                <input type="hidden" name="Id" value="@u.Id" />
+                <label for="Reason" class="form-label">Reason for suspension</label>
+                <input id="Reason" name="Reason" class="form-control mb-2" maxlength="500" required />
+                <button type="submit" class="btn btn-danger">Suspend and sign out</button>
+            </form>
+        }
+        </div></div>
+
+        @if (Model.ViewerIsSuperAdmin)
+        {
+            <div class="card"><div class="card-header">Role (Super Admin only)</div><div class="card-body">
+                <form asp-action="SetRole" method="post" class="row g-2 align-items-end">
+                    <input type="hidden" name="id" value="@u.Id" />
+                    <div class="col-sm-8">
+                        <label for="role" class="form-label">Role</label>
+                        <select id="role" name="role" class="form-select">
+                            @foreach (var role in AppRoles.All)
+                            {
+                                <option value="@role" selected="@(role == u.Role)">@role</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-sm-4"><button type="submit" class="btn btn-primary">Update</button></div>
+                </form>
+                <div class="form-text mt-2">Staff roles require two-factor authentication. Changes sign the user out within a minute.</div>
+            </div></div>
+        }
+    }
+    </div>
+</div>

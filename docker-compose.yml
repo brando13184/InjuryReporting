@@ -1,0 +1,16 @@
+# Local development database only. Production should use a managed Postgres with encryption at rest,
+# TLS enforced (SSL Mode=VerifyFull), automated encrypted backups and a least-privilege app role.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: injury_reporting
+      POSTGRES_USER: injury_app
+      POSTGRES_PASSWORD: dev_only_change_me
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - injury_pg:/var/lib/postgresql/data
+
+volumes:
+  injury_pg:
