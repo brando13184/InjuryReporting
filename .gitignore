@@ -6,3 +6,5 @@ obj/
 *.p12
 secrets.json
 appsettings.Production.json
+*.pem
+*.key
