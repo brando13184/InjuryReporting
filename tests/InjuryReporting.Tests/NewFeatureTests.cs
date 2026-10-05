@@ -190,6 +190,64 @@ public class NewFeatureWebTests : IClassFixture<AppFactory>
         Assert.True(await db.AuditLog.AnyAsync(a => a.Action == "account.deleted" && a.ActorUserId == uid));
     }
 
+    /// <summary>RFC 6238 TOTP (SHA-1, 30 s, 6 digits) from Identity's base32 authenticator key.</summary>
+    private static string Totp(string base32Key)
+    {
+        const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+        var bits = new System.Text.StringBuilder();
+        foreach (var ch in base32Key.TrimEnd('=').ToUpperInvariant())
+            bits.Append(Convert.ToString(alphabet.IndexOf(ch), 2).PadLeft(5, '0'));
+        var key = Enumerable.Range(0, bits.Length / 8).Select(i => Convert.ToByte(bits.ToString(i * 8, 8), 2)).ToArray();
+        var counter = BitConverter.GetBytes(DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 30);
+        if (BitConverter.IsLittleEndian) Array.Reverse(counter);
+        var hash = new System.Security.Cryptography.HMACSHA1(key).ComputeHash(counter);
+        var o = hash[^1] & 0x0F;
+        var bin = ((hash[o] & 0x7F) << 24) | (hash[o + 1] << 16) | (hash[o + 2] << 8) | hash[o + 3];
+        return (bin % 1_000_000).ToString("D6");
+    }
+
+    [Fact]
+    public async Task Staff_can_enrol_in_two_factor_without_being_signed_out_and_then_reach_admin_pages()
+    {
+        // Regression: viewing the setup page and enabling 2FA both change the security stamp. Without re-issuing the
+        // session cookie the user was silently signed out mid-setup and bounced to a POST-only address (405).
+        const string email = "newstaff@example.org";
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var users = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>();
+            var u = new ApplicationUser { Id = Guid.NewGuid(), UserName = email, Email = email, EmailConfirmed = true, DisplayName = "New Staff" };
+            Assert.True((await users.CreateAsync(u, "Another-Long-Passw0rd")).Succeeded);
+            await users.AddToRoleAsync(u, "Admin");
+        }
+        var c = _factory.NewClient();
+        Assert.Equal(HttpStatusCode.Redirect, (await c.PostAsync("/Account/Login", Form(
+            ("__RequestVerificationToken", await Token(c, "/Account/Login")), ("Email", email), ("Password", "Another-Long-Passw0rd")))).StatusCode);
+
+        // Staff without 2FA are sent to enrol.
+        Assert.Contains("/Manage/TwoFactor", (await c.GetAsync("/Incidents")).Headers.Location!.OriginalString);
+
+        var setupToken = await Token(c, "/Manage/TwoFactor");                    // generates the authenticator key (stamp changes)
+        Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/Manage")).StatusCode); // still signed in
+
+        string key;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var users = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>();
+            key = (await users.GetAuthenticatorKeyAsync((await users.FindByEmailAsync(email))!))!;
+        }
+        var enable = await c.PostAsync("/Manage/EnableTwoFactor", Form(("__RequestVerificationToken", setupToken), ("Code", Totp(key))));
+        Assert.Equal(HttpStatusCode.OK, enable.StatusCode);
+        Assert.Contains("recovery codes", await enable.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+
+        // Still signed in after enabling, and staff pages are now open.
+        Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/Manage")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/Incidents")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/Analytics")).StatusCode);
+
+        // POST-only addresses opened as pages redirect to the 2FA page instead of a 405.
+        Assert.Equal(HttpStatusCode.Redirect, (await c.GetAsync("/Manage/EnableTwoFactor")).StatusCode);
+    }
+
     [Fact]
     public async Task Two_factor_setup_shows_a_qr_code_and_staff_pages_for_new_features_render()
     {

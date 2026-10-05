@@ -39,6 +39,8 @@ public class AppFactory : WebApplicationFactory<Program>
                          && d.ServiceType.GenericTypeArguments[0] == typeof(AppDbContext)).ToList())
                 services.Remove(d);
             services.AddDbContext<AppDbContext>(o => o.UseSqlite(_connection));
+            // Validate the security stamp on every request (prod: every minute) so stamp-related sign-outs show up in tests.
+            services.Configure<Microsoft.AspNetCore.Identity.SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.Zero);
             var opts = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_connection).Options;
             using var db = new AppDbContext(opts, new EphemeralDataProtectionProvider());
             db.Database.EnsureCreated();

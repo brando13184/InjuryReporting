@@ -2,11 +2,17 @@
     ViewData["Title"] = "Error";
     var code = ViewData["Code"] as int?;
 }
-<h1 class="h3">@(code == 404 ? "Page not found" : code == 429 ? "Slow down a moment" : "Something went wrong")</h1>
+<h1 class="h3">@(code switch { 404 => "Page not found", 429 => "Slow down a moment", 400 => "That request couldn't be processed", 405 => "That page can't be opened directly", 403 => "Access denied", _ => "Something went wrong" })</h1>
 <p>
-    @if (code == 429) { <text>Too many requests were made from your connection. Please wait a while and try again.</text> }
-    else if (code == 404) { <text>We couldn't find that page.</text> }
-    else { <text>An error occurred while processing your request. No report data was lost or exposed.</text> }
+    @switch (code)
+    {
+        case 404: <text>We couldn't find that page.</text> break;
+        case 429: <text>Too many requests were made from your connection. Please wait a while and try again.</text> break;
+        case 400: <text>Your form or session probably expired. Go back, reload the page and try again.</text> break;
+        case 405: <text>That address only works from a button or form on the site. Use the menu to get where you meant to go.</text> break;
+        case 403: <text>You don't have permission to view that page.</text> break;
+        default: <text>An error occurred while processing your request. No report data was lost or exposed.</text> break;
+    }
 </p>
 <p class="text-muted small">Reference: <span class="mono">@ViewData["RequestId"]</span></p>
 <a class="btn btn-primary" asp-controller="Home" asp-action="Index">Back to home</a>

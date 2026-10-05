@@ -142,6 +142,11 @@ public class ManageController : AppController
         return user == null ? Challenge() : View(await BuildTwoFactor(user));
     }
 
+    // If someone is bounced to sign in and then redirected back to a POST-only address, send them to the page instead of a 405.
+    [HttpGet] public IActionResult EnableTwoFactor() => RedirectToAction(nameof(TwoFactor));
+    [HttpGet, ActionName("ResetRecoveryCodes")] public IActionResult ResetRecoveryCodesRedirect() => RedirectToAction(nameof(TwoFactor));
+    [HttpGet] public IActionResult DisableTwoFactor() => RedirectToAction(nameof(TwoFactor));
+
     [HttpPost]
     public async Task<IActionResult> EnableTwoFactor(TwoFactorSetupModel model)
     {
@@ -154,7 +159,8 @@ public class ManageController : AppController
             TempData["Warning"] = "That code didn't match. Check the key was entered correctly and your device clock is accurate, then try again.";
             return RedirectToAction(nameof(TwoFactor));
         }
-        await _users.SetTwoFactorEnabledAsync(user, true);
+        await _users.SetTwoFactorEnabledAsync(user, true);      // this changes the security stamp...
+        await _signIn.RefreshSignInAsync(user);                  // ...so re-issue this session's cookie or the user is signed out
         var codes = await _users.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
         await _audit.LogAsync("mfa.enabled", "User", user.Id.ToString());
         return View("RecoveryCodes", codes!.ToList());
@@ -259,7 +265,8 @@ public class ManageController : AppController
         var key = await _users.GetAuthenticatorKeyAsync(user);
         if (string.IsNullOrEmpty(key))
         {
-            await _users.ResetAuthenticatorKeyAsync(user);
+            await _users.ResetAuthenticatorKeyAsync(user);       // changes the security stamp...
+            await _signIn.RefreshSignInAsync(user);              // ...so keep the current session valid
             key = await _users.GetAuthenticatorKeyAsync(user);
         }
         var uri = string.Format(CultureInfo.InvariantCulture, "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6",
