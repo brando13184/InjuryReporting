@@ -77,6 +77,42 @@ public class ReportsController : AppController
             .FirstOrDefaultAsync(r => r.Id == id && r.ReporterUserId == uid);   // only the owner can read it here
         if (report == null) return NotFound();
         await _audit.LogAsync("report.viewed_by_owner", "Report", id.ToString());
-        return View(new ReportDetailsModel { Report = report });
+        return View(new ReportDetailsModel { Report = report, CanEdit = ReportRules.OwnerCanEdit(report, DateTime.UtcNow) });
+    }
+
+    /// <summary>The owner may correct the narrative for a short time. Nothing that drives duplicate matching can change.</summary>
+    [Authorize, HttpGet]
+    public async Task<IActionResult> Edit(Guid id)
+    {
+        var uid = CurrentUserId;
+        var report = await _db.Reports.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id && r.ReporterUserId == uid);
+        if (report == null) return NotFound();
+        if (!ReportRules.OwnerCanEdit(report, DateTime.UtcNow))
+        {
+            TempData["Warning"] = "Reports can only be edited for 7 days after they're submitted.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+        return View(new EditNarrativeModel { Id = id, Narrative = report.Narrative });
+    }
+
+    [Authorize, HttpPost]
+    public async Task<IActionResult> Edit(EditNarrativeModel model)
+    {
+        var uid = CurrentUserId;
+        var report = await _db.Reports.FirstOrDefaultAsync(r => r.Id == model.Id && r.ReporterUserId == uid);
+        if (report == null) return NotFound();
+        if (!ReportRules.OwnerCanEdit(report, DateTime.UtcNow))
+        {
+            TempData["Warning"] = "Reports can only be edited for 7 days after they're submitted.";
+            return RedirectToAction(nameof(Details), new { id = model.Id });
+        }
+        if (!ModelState.IsValid) return View(model);
+
+        report.Narrative = model.Narrative.Trim();
+        report.NarrativeEditedUtc = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        await _audit.LogAsync("report.narrative_edited", "Report", report.Id.ToString());
+        TempData["Success"] = "Narrative updated.";
+        return RedirectToAction(nameof(Details), new { id = model.Id });
     }
 }

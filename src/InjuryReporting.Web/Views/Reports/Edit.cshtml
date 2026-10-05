@@ -1,0 +1,22 @@
+@model EditNarrativeModel
+@{ ViewData["Title"] = "Edit narrative"; }
+<div class="row justify-content-center"><div class="col-lg-8">
+    <h1 class="h3 mb-1">Edit narrative</h1>
+    <p class="text-muted">You can correct the narrative for 7 days after submitting. The date, event, discipline and other details can't be changed, so duplicate detection stays reliable. If those are wrong, contact an administrator.</p>
+    <form asp-action="Edit" method="post" novalidate>
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        <input type="hidden" asp-for="Id" />
+        <div class="card mb-3"><div class="card-body">
+            <label asp-for="Narrative" class="form-label"></label>
+            <textarea asp-for="Narrative" class="form-control" rows="6" maxlength="2000" data-counter="narrative-count"></textarea>
+            <div class="d-flex justify-content-between">
+                <span asp-validation-for="Narrative" class="text-danger small"></span>
+                <span id="narrative-count" class="form-text ms-auto"></span>
+            </div>
+            <div class="form-text"><strong>Please do not include names, phone numbers or membership numbers.</strong></div>
+        </div></div>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a class="btn btn-link" asp-action="Details" asp-route-id="@Model.Id">Cancel</a>
+    </form>
+</div></div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -78,7 +78,8 @@ public class Incident
     public List<InjuryReport> Reports { get; set; } = new();
 }
 
-/// <summary>An individual submission. Immutable once stored; only its incident link can change.</summary>
+/// <summary>An individual submission. The fields that identify the incident are immutable once stored; only the
+/// incident link (admin merge/split) and, for the owner within a short window, the narrative can change.</summary>
 public class InjuryReport
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -113,6 +114,18 @@ public class InjuryReport
 
     /// <summary>Anonymous reports are truncated to the day so they cannot be correlated with logs.</summary>
     public DateTime SubmittedUtc { get; set; }
+
+    /// <summary>Set when the owner corrected the narrative. Only the narrative can ever be edited (never the
+    /// fields that drive duplicate matching), and only within <see cref="ReportRules.OwnerEditWindow"/>.</summary>
+    public DateTime? NarrativeEditedUtc { get; set; }
+}
+
+public static class ReportRules
+{
+    public static readonly TimeSpan OwnerEditWindow = TimeSpan.FromDays(7);
+
+    public static bool OwnerCanEdit(InjuryReport r, DateTime nowUtc) =>
+        r.ReporterUserId != null && nowUtc - r.SubmittedUtc <= OwnerEditWindow;
 }
 
 public class AuditLogEntry

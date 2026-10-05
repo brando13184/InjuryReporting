@@ -95,6 +95,10 @@ builder.Services.AddScoped<LookupService>();
 builder.Services.AddScoped<StaffMfaFilter>();
 builder.Services.AddHostedService<StartupTasks>();
 
+// One year of HSTS for this host only. IncludeSubDomains is deliberately off: other subdomains of
+// longlivetheoutlands.org host unrelated sites that may not be HTTPS-only.
+builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(365); o.IncludeSubDomains = false; o.Preload = false; });
+
 builder.Services.AddControllersWithViews(o => o.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
 
 var app = builder.Build();

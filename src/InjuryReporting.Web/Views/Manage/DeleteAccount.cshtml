@@ -1,0 +1,28 @@
+@model DeleteAccountModel
+@{ ViewData["Title"] = "Delete account"; }
+<div class="row justify-content-center"><div class="col-md-8 col-lg-6">
+    <div class="card border-danger"><div class="card-body p-4">
+        <h1 class="h4 mb-3 text-danger">Delete my account</h1>
+        <ul>
+            <li>Your sign-in, profile and settings are permanently removed.</li>
+            <li>Reports you filed stay in the safety statistics but are <strong>no longer linked to you</strong> (they become anonymous), and you won't be able to see or edit them.</li>
+            <li>A record that the account was deleted is kept in the audit log.</li>
+        </ul>
+        <form asp-action="DeleteAccount" method="post" novalidate>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <div class="mb-3">
+                <label asp-for="CurrentPassword" class="form-label"></label>
+                <input asp-for="CurrentPassword" class="form-control" autocomplete="current-password" />
+                <span asp-validation-for="CurrentPassword" class="text-danger small"></span>
+            </div>
+            <div class="form-check mb-3">
+                <input asp-for="Confirm" class="form-check-input" />
+                <label asp-for="Confirm" class="form-check-label"></label>
+                <span asp-validation-for="Confirm" class="text-danger small d-block"></span>
+            </div>
+            <button type="submit" class="btn btn-danger">Delete my account</button>
+            <a class="btn btn-link" asp-action="Index">Cancel</a>
+        </form>
+    </div></div>
+</div></div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

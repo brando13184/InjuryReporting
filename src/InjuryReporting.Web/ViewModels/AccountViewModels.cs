@@ -116,11 +116,24 @@ public class ChangeEmailModel
     public string CurrentPassword { get; set; } = "";
 }
 
+public class DeleteAccountModel
+{
+    [Required, DataType(DataType.Password)]
+    [Display(Name = "Current password")]
+    public string CurrentPassword { get; set; } = "";
+
+    [Range(typeof(bool), "true", "true", ErrorMessage = "Tick the box to confirm.")]
+    [Display(Name = "I understand this can't be undone")]
+    public bool Confirm { get; set; }
+}
+
 public class TwoFactorSetupModel
 {
     public bool IsEnabled { get; set; }
     public string? SharedKey { get; set; }
     public string? AuthenticatorUri { get; set; }
+    /// <summary>Inline SVG QR code of <see cref="AuthenticatorUri"/> (rendered server-side; nothing leaves the server).</summary>
+    public string? QrSvg { get; set; }
     public int RecoveryCodesLeft { get; set; }
 
     [StringLength(8, MinimumLength = 6)]

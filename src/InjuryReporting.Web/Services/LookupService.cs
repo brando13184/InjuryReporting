@@ -17,14 +17,16 @@ public class LookupService
     private readonly AppDbContext _db;
     public LookupService(AppDbContext db) => _db = db;
 
-    public async Task<LookupLists> GetAsync()
+    /// <param name="includeInactive">Staff screens pass true so retired list entries still display on old records
+    /// and in filters; public forms only offer active entries.</param>
+    public async Task<LookupLists> GetAsync(bool includeInactive = false)
     {
         static List<SelectListItem> Map(IEnumerable<LookupEntity> e) =>
-            e.Select(x => new SelectListItem(x.Name, x.Id.ToString())).ToList();
+            e.Select(x => new SelectListItem(x.IsActive ? x.Name : x.Name + " (inactive)", x.Id.ToString())).ToList();
 
-        var disciplines = await _db.Disciplines.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Id).ToListAsync();
-        var types = await _db.InjuryTypes.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Id).ToListAsync();
-        var kingdoms = await _db.Kingdoms.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
+        var disciplines = await _db.Disciplines.AsNoTracking().Where(x => includeInactive || x.IsActive).OrderBy(x => x.Id).ToListAsync();
+        var types = await _db.InjuryTypes.AsNoTracking().Where(x => includeInactive || x.IsActive).OrderBy(x => x.Id).ToListAsync();
+        var kingdoms = await _db.Kingdoms.AsNoTracking().Where(x => includeInactive || x.IsActive).OrderBy(x => x.Name).ToListAsync();
         return new LookupLists
         {
             Disciplines = Map(disciplines),

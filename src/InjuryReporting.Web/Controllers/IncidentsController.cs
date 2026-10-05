@@ -43,7 +43,7 @@ public class IncidentsController : StaffController
 
         var total = await q.CountAsync();
         var rows = await ToRows(q.OrderByDescending(i => i.InjuryDate).ThenBy(i => i.Id).Skip((filter.Page - 1) * PageSize).Take(PageSize));
-        return View(new IncidentListModel { Filter = filter, Rows = rows, Total = total, PageSize = PageSize, Lookups = await _lookups.GetAsync() });
+        return View(new IncidentListModel { Filter = filter, Rows = rows, Total = total, PageSize = PageSize, Lookups = await _lookups.GetAsync(includeInactive: true) });
     }
 
     public async Task<IActionResult> Details(Guid id)
@@ -77,7 +77,7 @@ public class IncidentsController : StaffController
         {
             Id = i.Id, DisciplineId = i.DisciplineId, InjuryTypeId = i.InjuryTypeId, Severity = i.Severity,
             InjuryDate = i.InjuryDate, EventName = i.EventName, EventKingdomId = i.EventKingdomId,
-            InjuredKingdomId = i.InjuredKingdomId, ReviewerNotes = i.ReviewerNotes, Lookups = await _lookups.GetAsync()
+            InjuredKingdomId = i.InjuredKingdomId, ReviewerNotes = i.ReviewerNotes, Lookups = await _lookups.GetAsync(includeInactive: true)
         });
     }
 
@@ -86,7 +86,7 @@ public class IncidentsController : StaffController
     {
         if (!ModelState.IsValid)
         {
-            m.Lookups = await _lookups.GetAsync();
+            m.Lookups = await _lookups.GetAsync(includeInactive: true);
             return View(m);
         }
         var result = await _incidents.UpdateAsync(m.Id, new IncidentEdit(m.DisciplineId!.Value, m.InjuryTypeId!.Value, m.Severity!.Value,
@@ -94,7 +94,7 @@ public class IncidentsController : StaffController
         if (!result.Succeeded)
         {
             ModelState.AddModelError("", result.Error!);
-            m.Lookups = await _lookups.GetAsync();
+            m.Lookups = await _lookups.GetAsync(includeInactive: true);
             return View(m);
         }
         TempData["Success"] = "Incident updated.";

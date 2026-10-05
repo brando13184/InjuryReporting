@@ -105,6 +105,14 @@ public class SuspendModel
     [Required, StringLength(500)] public string Reason { get; set; } = "";
 }
 
+public class LookupListModel
+{
+    public string Kind { get; init; } = "";
+    public string KindTitle { get; init; } = "";
+    public Dictionary<string, string> Kinds { get; init; } = new();
+    public List<LookupEntity> Items { get; init; } = new();
+}
+
 public class AuditListModel
 {
     public List<AuditLogEntry> Rows { get; init; } = new();

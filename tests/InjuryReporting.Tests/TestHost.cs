@@ -16,13 +16,17 @@ public sealed class TestHost : IDisposable
     private readonly ServiceProvider _root;
     private readonly IServiceScope _scope;
 
-    public TestHost()
+    /// <param name="postgresConnection">When set, runs against that (already migrated) Postgres database instead of SQLite.</param>
+    public TestHost(string? postgresConnection = null)
     {
         _connection.Open();
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<IDataProtectionProvider, EphemeralDataProtectionProvider>();
-        services.AddDbContext<AppDbContext>(o => o.UseSqlite(_connection));
+        services.AddDbContext<AppDbContext>(o =>
+        {
+            if (postgresConnection != null) o.UseNpgsql(postgresConnection); else o.UseSqlite(_connection);
+        });
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(o =>
             {
                 o.Password.RequiredLength = 14;
@@ -38,9 +42,10 @@ public sealed class TestHost : IDisposable
         services.AddScoped<IUserAdminService, UserAdminService>();
         _root = services.BuildServiceProvider();
         _scope = _root.CreateScope();
-        Db.Database.EnsureCreated();
+        if (postgresConnection == null) Db.Database.EnsureCreated();
         foreach (var r in AppRoles.All)
-            Roles.CreateAsync(new IdentityRole<Guid>(r)).GetAwaiter().GetResult();
+            if (!Roles.RoleExistsAsync(r).GetAwaiter().GetResult())
+                Roles.CreateAsync(new IdentityRole<Guid>(r)).GetAwaiter().GetResult();
     }
 
     public T Get<T>() where T : notnull => _scope.ServiceProvider.GetRequiredService<T>();

@@ -32,6 +32,7 @@
                                     <li><a class="dropdown-item" asp-controller="Incidents" asp-action="Index">Incidents</a></li>
                                     <li><a class="dropdown-item" asp-controller="Analytics" asp-action="Index">Analytics</a></li>
                                     <li><a class="dropdown-item" asp-controller="Users" asp-action="Index">Users</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Lookups" asp-action="Index">Pick lists</a></li>
                                     @if (User.IsInRole(AppRoles.SuperAdmin))
                                     {
                                         <li><a class="dropdown-item" asp-controller="Audit" asp-action="Index">Audit log</a></li>

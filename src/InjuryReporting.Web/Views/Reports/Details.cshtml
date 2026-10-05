@@ -17,4 +17,12 @@
         <dt class="col-sm-4">Narrative</dt><dd class="col-sm-8 narrative">@r.Narrative</dd>
     </dl>
 </div></div>
-<a asp-action="Mine">&larr; My reports</a>
+@if (r.NarrativeEditedUtc is { } edited)
+{
+    <p class="small text-muted">Narrative last edited @edited.ToString("yyyy-MM-dd HH:mm") UTC.</p>
+}
+<a asp-action="Mine" class="me-3">&larr; My reports</a>
+@if (Model.CanEdit)
+{
+    <a asp-action="Edit" asp-route-id="@r.Id" class="btn btn-outline-primary btn-sm">Edit narrative</a>
+}

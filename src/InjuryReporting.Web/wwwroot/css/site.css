@@ -65,5 +65,7 @@ progress.bar::-moz-progress-bar { background: #7b1e2b; border-radius: .45rem; }
 
 .stat-number { font-size: 2.25rem; font-weight: 700; color: #7b1e2b; line-height: 1; }
 .table-xs td, .table-xs th { padding: .35rem .5rem; font-size: .9rem; }
+.chart-label { fill: #5c5346; font-size: 10px; }
+.qr svg { width: 200px; height: 200px; background: #fff; border: 1px solid #e6ddd0; border-radius: .5rem; padding: .5rem; }
 .narrative { white-space: pre-wrap; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }

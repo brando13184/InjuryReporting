@@ -1,0 +1,43 @@
+@model LookupListModel
+@{ ViewData["Title"] = "Pick lists"; }
+<h1 class="h3 mb-3">Pick lists</h1>
+<ul class="nav nav-tabs mb-3">
+    @foreach (var (key, title) in Model.Kinds)
+    {
+        <li class="nav-item"><a class="nav-link @(key == Model.Kind ? "active" : "")" asp-action="Index" asp-route-kind="@key">@title</a></li>
+    }
+</ul>
+<p class="text-muted">Entries are renamed or deactivated, never deleted, so past reports keep their meaning. Inactive entries are hidden from the public report form.</p>
+
+<form asp-action="Add" method="post" class="row g-2 mb-3">
+    <input type="hidden" name="kind" value="@Model.Kind" />
+    <div class="col-sm-6 col-md-4"><input name="name" class="form-control" maxlength="100" placeholder="New @Model.KindTitle.ToLower().TrimEnd('s')" required /></div>
+    <div class="col-auto"><button type="submit" class="btn btn-primary">Add</button></div>
+</form>
+
+<div class="table-responsive"><table class="table bg-white align-middle table-xs">
+    <thead><tr><th>Name</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var item in Model.Items)
+    {
+        <tr>
+            <td>
+                <form asp-action="Rename" method="post" class="d-flex gap-2">
+                    <input type="hidden" name="kind" value="@Model.Kind" />
+                    <input type="hidden" name="id" value="@item.Id" />
+                    <input name="name" value="@item.Name" class="form-control form-control-sm" maxlength="100" aria-label="Name" />
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Rename</button>
+                </form>
+            </td>
+            <td>@if (item.IsActive) { <span class="badge text-bg-success">Active</span> } else { <span class="badge text-bg-secondary">Inactive</span> }</td>
+            <td>
+                <form asp-action="Toggle" method="post">
+                    <input type="hidden" name="kind" value="@Model.Kind" />
+                    <input type="hidden" name="id" value="@item.Id" />
+                    <button type="submit" class="btn btn-sm @(item.IsActive ? "btn-outline-danger" : "btn-outline-success")">@(item.IsActive ? "Deactivate" : "Activate")</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table></div>

@@ -1,0 +1,55 @@
+@model List<Bucket>
+@using Microsoft.AspNetCore.Html
+@* Inline SVG column chart. Uses presentation attributes only (no style="..."), so it is CSP-safe.
+   SVG <text> goes through Txt() because Razor reserves the <text> tag name. *@
+@{
+    const double W = 720, H = 230, left = 34, right = 8, top = 10, bottom = 44;
+    var data = Model;
+    var n = data.Count;
+    var max = Math.Max(1, data.Select(b => Math.Max(b.Count, 0)).DefaultIfEmpty(0).Max());
+    var plotW = W - left - right;
+    var plotH = H - top - bottom;
+    var slot = n == 0 ? plotW : plotW / n;
+    var barW = Math.Max(2, slot * 0.7);
+    var labelEvery = Math.Max(1, (int)Math.Ceiling(n / 12.0));
+    string F(double d) => d.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+    IHtmlContent Txt(string attrs, string content) =>
+        new HtmlString($"<text {attrs} class=\"chart-label\">{System.Net.WebUtility.HtmlEncode(content)}</text>");
+}
+@if (n == 0)
+{
+    <span class="text-muted">No data for this filter.</span>
+}
+else
+{
+    <svg viewBox="0 0 @F(W) @F(H)" class="w-100 chart" role="img" aria-label="Incidents per month">
+        <line x1="@F(left)" y1="@F(top + plotH)" x2="@F(W - right)" y2="@F(top + plotH)" stroke="#b9a98f" stroke-width="1" />
+        <line x1="@F(left)" y1="@F(top)" x2="@F(left)" y2="@F(top + plotH)" stroke="#b9a98f" stroke-width="1" />
+        @Txt($"x=\"{F(left - 4)}\" y=\"{F(top + 8)}\" text-anchor=\"end\"", max.ToString())
+        @Txt($"x=\"{F(left - 4)}\" y=\"{F(top + plotH)}\" text-anchor=\"end\"", "0")
+        @for (var i = 0; i < n; i++)
+        {
+            var b = data[i];
+            var hidden = b.Count == AnalyticsResult.Hidden;
+            var h = hidden ? 0 : plotH * b.Count / max;
+            var x = left + i * slot + (slot - barW) / 2;
+            var cx = x + barW / 2;
+            var ly = top + plotH + 14;
+            <g>
+                <title>@b.Label: @(hidden ? "<5" : b.Count.ToString())</title>
+                @if (hidden)
+                {
+                    <rect x="@F(x)" y="@F(top + plotH - 4)" width="@F(barW)" height="4" fill="#b9a98f" />
+                }
+                else if (b.Count > 0)
+                {
+                    <rect x="@F(x)" y="@F(top + plotH - h)" width="@F(barW)" height="@F(h)" fill="#7b1e2b" rx="1" />
+                }
+            </g>
+            @if (i % labelEvery == 0)
+            {
+                @Txt($"x=\"{F(cx)}\" y=\"{F(ly)}\" text-anchor=\"end\" transform=\"rotate(-45 {F(cx)} {F(ly)})\"", b.Label)
+            }
+        }
+    </svg>
+}

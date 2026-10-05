@@ -81,4 +81,15 @@ public class MyReportRow
 public class ReportDetailsModel
 {
     public InjuryReport Report { get; init; } = null!;
+    public bool CanEdit { get; init; }
+}
+
+public class EditNarrativeModel
+{
+    public Guid Id { get; set; }
+
+    [Required, StringLength(2000, MinimumLength = 10, ErrorMessage = "Please write between 10 and 2000 characters.")]
+    [DataType(DataType.MultilineText)]
+    [Display(Name = "Short narrative")]
+    public string Narrative { get; set; } = "";
 }

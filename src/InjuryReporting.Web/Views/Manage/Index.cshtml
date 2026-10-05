@@ -32,7 +32,10 @@
                     <span class="badge @(Model.TwoFactorEnabled ? "text-bg-success" : "text-bg-secondary")">@(Model.TwoFactorEnabled ? "On" : "Off")</span>
                 </a>
             </div>
-            <div class="card-footer small text-muted">Role: @Model.Role</div>
+            <div class="card-footer small text-muted d-flex justify-content-between">
+                <span>Role: @Model.Role</span>
+                <a asp-action="DeleteAccount" class="text-danger">Delete my account</a>
+            </div>
         </div>
     </div>
 </div>

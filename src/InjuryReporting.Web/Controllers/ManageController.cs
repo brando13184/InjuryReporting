@@ -189,6 +189,55 @@ public class ManageController : AppController
         return RedirectToAction(nameof(TwoFactor));
     }
 
+    // ---- Delete account -----------------------------------------------------------------------
+
+    [HttpGet]
+    public IActionResult DeleteAccount() => View(new DeleteAccountModel());
+
+    /// <summary>
+    /// Self-service erasure. The account, its sign-in and personal profile are removed. Reports already filed
+    /// stay (they feed safety statistics) but lose their link to the person, i.e. they become anonymous.
+    /// The audit trail is append-only and keeps the event, as required for SOC2.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> DeleteAccount(DeleteAccountModel model)
+    {
+        if (!ModelState.IsValid) return View(model);
+        var user = await _users.GetUserAsync(User);
+        if (user == null) return Challenge();
+
+        if (!await _users.CheckPasswordAsync(user, model.CurrentPassword))
+        {
+            ModelState.AddModelError(nameof(model.CurrentPassword), "That password is not correct.");
+            await _audit.LogAsync("account.delete_bad_password", "User", user.Id.ToString());
+            return View(model);
+        }
+
+        if (await _users.IsInRoleAsync(user, Security.AppRoles.SuperAdmin))
+        {
+            var others = (await _users.GetUsersInRoleAsync(Security.AppRoles.SuperAdmin)).Count(u => u.Id != user.Id && !u.IsSuspended);
+            if (others == 0)
+            {
+                ModelState.AddModelError("", "You're the only active Super Admin. Promote another Super Admin before deleting this account.");
+                return View(model);
+            }
+        }
+
+        var email = user.Email!;
+        await _audit.LogAsync("account.deleted", "User", user.Id.ToString(), "self-service; filed reports kept but unlinked");
+        var result = await _users.DeleteAsync(user);
+        if (!result.Succeeded)
+        {
+            foreach (var e in result.Errors) ModelState.AddModelError("", e.Description);
+            return View(model);
+        }
+        await _signIn.SignOutAsync();
+        await _email.SendAsync(email, "Your Injury Reporting account was deleted",
+            "<p>Your account has been deleted. Reports you filed remain in the safety statistics but are no longer linked to you.</p>");
+        TempData["Success"] = "Your account has been deleted.";
+        return RedirectToAction("Index", "Home");
+    }
+
     // ---- helpers ------------------------------------------------------------------------------
 
     private async Task<ProfileModel> BuildProfile(ApplicationUser user, ProfileModel? posted = null)
@@ -215,11 +264,19 @@ public class ManageController : AppController
         }
         var uri = string.Format(CultureInfo.InvariantCulture, "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6",
             UrlEncoder.Default.Encode("Injury Reporting"), UrlEncoder.Default.Encode(user.Email!), key);
+        string? qr = null;
+        if (!user.TwoFactorEnabled)
+        {
+            using var generator = new QRCoder.QRCodeGenerator();
+            using var data = generator.CreateQrCode(uri, QRCoder.QRCodeGenerator.ECCLevel.M);
+            qr = new QRCoder.SvgQRCode(data).GetGraphic(4, "#000000", "#ffffff", drawQuietZones: true);
+        }
         return new TwoFactorSetupModel
         {
             IsEnabled = user.TwoFactorEnabled,
             SharedKey = FormatKey(key!),
             AuthenticatorUri = uri,
+            QrSvg = qr,
             RecoveryCodesLeft = await _users.CountRecoveryCodesAsync(user)
         };
     }

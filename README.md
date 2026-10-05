@@ -19,7 +19,7 @@ The first Super Admin is created from the seed secrets only when none exists; re
 Staff must enrol in 2FA (**Manage → Two-factor**) before any staff page opens.
 
 ```bash
-dotnet test                                # 29 tests: duplicate logic, merges, user guards, encryption, full HTTP pipeline
+dotnet test                                # 37 tests on SQLite + 6 real-Postgres integration tests (skipped unless TEST_PG_ADMIN is set)
 dotnet dotnet-ef migrations add <Name> --project src/InjuryReporting.Web --output-dir Data/Migrations
 ```
 
@@ -33,7 +33,9 @@ dotnet dotnet-ef migrations add <Name> --project src/InjuryReporting.Web --outpu
 | Anonymous | No account needed. Signed-in users can tick "submit anonymously" per report. Anonymous reports store no user id, IP, or time of day, and the audit event carries no actor or report id. |
 | Combining | Reports roll up into **incidents**. Analytics count incidents, never raw reports. |
 | Users & roles | Email login. Roles: `User`, `Admin`, `SuperAdmin`. Admins review/merge incidents, see analytics, and suspend/reinstate plain users. Super Admins also grant roles and see the audit log. Users can change password and (with confirmation) email. |
-| Analytics | By discipline, injury type, severity, month, event kingdom, injured person's kingdom; discipline × injury-type matrix; date/discipline/kingdom filters; de-identified CSV export. |
+| Analytics | Monthly trend chart (SVG, gap-filled), year-over-year grid, by discipline / injury type / severity / year / event kingdom / injured person's kingdom, discipline × injury-type matrix, filters. **"Hide counts under 5"** suppresses small cells; the *shareable summary* CSV always does. The incident-row CSV is internal only. |
+| Pick lists | Staff can add, rename and deactivate kingdoms, disciplines and injury types (never delete, so history stays meaningful). Inactive entries leave the public form but still show on old records. |
+| Self-service | Reporters can correct their report's **narrative** for 7 days (never the fields that drive duplicate matching). Users can **delete their account**: sign-in and profile are removed, filed reports stay but become anonymous, and the audit log keeps the event. 2FA setup shows a QR code. |
 
 ### Avoiding duplicate and circular reporting
 
@@ -62,9 +64,18 @@ Mapped loosely to SOC 2 Trust Services Criteria / HIPAA Security Rule safeguards
 3. Keep secrets in a vault / environment, not `appsettings`. Remove `Seed:SuperAdminPassword` after first boot.
 4. SOC 2 / HIPAA also need organisational controls: BAAs with hosting/email vendors, centralised log shipping and alerting from the audit table, retention/deletion policy, access reviews, backup restore tests, pen testing, incident response.
 
+### Operations (`deploy/`)
+
+* `provision.sh`, `release.sh`, `switch-domain.sh`: first-time server setup, repeatable releases, per-subdomain nginx + TLS.
+* `harden-monitor.sh` + `ops/`: `fail2ban` (ssh + repeated failed app sign-ins), persistent 90-day journal, unattended security updates with a 09:00 UTC reboot when required, and email alerts through SES:
+  * health check every 5 min (site, services, disk, memory, TLS expiry, stuck reboot): alerts once, repeats every 6 h, sends an all-clear;
+  * audit-log watcher every 10 min: role/suspension/MFA changes, exports, account deletions, lockouts, bursts of failed sign-ins (never report content).
+  The health check runs *on* the server, so it can't see an AWS-firewall or DNS outage; add an external uptime monitor for that.
+* CI (`.github/workflows/ci.yml`) builds and runs every test including the Postgres integration tests against a Postgres service container, and fails if those were skipped.
+
 ### Known gaps / decisions for you
 
-* No QR code for 2FA (shows the key and `otpauth://` URI) to avoid a third-party library.
-* No hard-delete of users or reports (retention is a policy decision); user moderation is suspend/reinstate.
-* Analytics shows small counts as-is; consider small-cell suppression before sharing statistics outside the safety team.
+* No automated retention/purge: deleting reports after N years is a policy decision. Account self-deletion exists; report deletion does not.
+* Small-count suppression is per cell. Totals and neighbouring cells can still hint at hidden values, so share only aggregate figures.
+* Database and secrets backups are not automated yet.
 * Data Protection keys + PHI columns share one database; for stronger separation use a KMS-backed key store.

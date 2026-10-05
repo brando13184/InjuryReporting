@@ -24,7 +24,8 @@ else
     <div class="card"><div class="card-body">
         <ol>
             <li>Open an authenticator app (Microsoft Authenticator, Google Authenticator, 1Password, Authy…).</li>
-            <li>Add an account manually and enter this key:<br />
+            <li>Scan this QR code, or add an account manually and enter the key below it:
+                @if (!string.IsNullOrEmpty(Model.QrSvg)) { <div class="qr my-2">@Html.Raw(Model.QrSvg)</div> }
                 <span class="mono fs-5">@Model.SharedKey</span></li>
             <li>Enter the 6-digit code the app shows to confirm setup.</li>
         </ol>
