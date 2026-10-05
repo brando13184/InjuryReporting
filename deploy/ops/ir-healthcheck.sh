@@ -34,6 +34,17 @@ if [ -f /var/run/reboot-required ] && [ -n "$(find /var/run/reboot-required -mti
 fi
 
 now=$(date +%s)
+
+# Backups: the nightly job must have succeeded within the last 30 hours (only checked once backups are configured).
+if [ -f /etc/injuryreporting/backup.conf ]; then
+  if [ -f "$STATE/last_backup" ]; then
+    age_h=$(( (now - $(cat "$STATE/last_backup")) / 3600 ))
+    [ "$age_h" -lt 30 ] || problems+=("last successful backup was ${age_h} hours ago")
+  elif [ -n "$(find /etc/injuryreporting/backup.conf -mmin +2160 2>/dev/null)" ]; then
+    problems+=("backups are configured but none has ever succeeded")
+  fi
+fi
+
 if [ "${#problems[@]}" -gt 0 ]; then
   body=$(printf ' - %s\n' "${problems[@]}")
   last=$(cat "$STATE/last_alert" 2>/dev/null || echo 0)

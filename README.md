@@ -71,11 +71,12 @@ Mapped loosely to SOC 2 Trust Services Criteria / HIPAA Security Rule safeguards
   * health check every 5 min (site, services, disk, memory, TLS expiry, stuck reboot): alerts once, repeats every 6 h, sends an all-clear;
   * audit-log watcher every 10 min: role/suspension/MFA changes, exports, account deletions, lockouts, bursts of failed sign-ins (never report content).
   The health check runs *on* the server, so it can't see an AWS-firewall or DNS outage; add an external uptime monitor for that.
+* `backup-setup.sh` + `ops/ir-backup.sh`: nightly **age-encrypted** archive (database, roles, app secrets and the Data Protection certificate) to a private, versioned S3 bucket with a write-only IAM user, plus daily Lightsail snapshots. A missing backup alerts. See **`deploy/RESTORE.md`** for the restore runbook and key handling.
 * CI (`.github/workflows/ci.yml`) builds and runs every test including the Postgres integration tests against a Postgres service container, and fails if those were skipped.
 
 ### Known gaps / decisions for you
 
 * No automated retention/purge: deleting reports after N years is a policy decision. Account self-deletion exists; report deletion does not.
 * Small-count suppression is per cell. Totals and neighbouring cells can still hint at hidden values, so share only aggregate figures.
-* Database and secrets backups are not automated yet.
+* The backup private key lives only with the operator; losing it makes the S3 archives unreadable (Lightsail snapshots still work).
 * Data Protection keys + PHI columns share one database; for stronger separation use a KMS-backed key store.
