@@ -117,6 +117,41 @@ public class PostgresIntegrationTests : IClassFixture<PgDatabase>
     }
 
     [PgFact]
+    public async Task Audit_erasure_may_only_blank_personal_data_and_full_erasure_works_on_postgres()
+    {
+        using var h = new TestHost(_pg.ConnectionString);
+        await h.Get<IAuditService>().LogForAsync(Guid.NewGuid(), "pii@example.org", "test.pii", detail: "keep me");
+
+        // Allowed: blank the actor e-mail and IP, and nothing else.
+        Assert.True(await h.Db.Database.ExecuteSqlRawAsync("UPDATE \"AuditLog\" SET \"ActorEmail\" = NULL, \"IpAddress\" = NULL WHERE \"Action\" = 'test.pii'") >= 1);
+        // Still blocked: changing anything else, setting a non-NULL value, deleting.
+        await Assert.ThrowsAnyAsync<Exception>(() => h.Db.Database.ExecuteSqlRawAsync("UPDATE \"AuditLog\" SET \"Detail\" = 'tampered' WHERE \"Action\" = 'test.pii'"));
+        await Assert.ThrowsAnyAsync<Exception>(() => h.Db.Database.ExecuteSqlRawAsync("UPDATE \"AuditLog\" SET \"ActorEmail\" = 'forged@example.org' WHERE \"Action\" = 'test.pii'"));
+        await Assert.ThrowsAnyAsync<Exception>(() => h.Db.Database.ExecuteSqlRawAsync("UPDATE \"AuditLog\" SET \"Action\" = 'x', \"ActorEmail\" = NULL, \"IpAddress\" = NULL WHERE \"Action\" = 'test.pii'"));
+        await Assert.ThrowsAnyAsync<Exception>(() => h.Db.Database.ExecuteSqlRawAsync("DELETE FROM \"AuditLog\" WHERE \"Action\" = 'test.pii'"));
+
+        // Full erasure through the service, against real Postgres (transaction, FK set-null, cascade, trigger path).
+        var user = await h.AddUser("pg-erase@example.org", "User");
+        var svc = h.Get<IReportService>();
+        await svc.SubmitAsync(Input("Pg Erase Solo"), user.Id);
+        await svc.SubmitAsync(Input("Pg Erase Shared", sev: Severity.Hospitalization), user.Id);
+        await svc.SubmitAsync(Input("Pg Erase Shared"), null);
+        await h.Get<IAuditService>().LogForAsync(user.Id, user.Email, "login.succeeded");
+
+        var result = await h.Get<IUserDataService>().EraseAsync(user.Id, user.Id, deleteReports: true);
+        Assert.True(result.Succeeded, result.Error);
+        Assert.Equal(2, result.ReportsDeleted);
+        Assert.Equal(1, result.IncidentsRemoved);
+        Assert.True(result.AuditRowsScrubbed >= 1);
+
+        h.Db.ChangeTracker.Clear();
+        Assert.False(await h.Db.Users.AnyAsync(u => u.Id == user.Id));
+        Assert.False(await h.Db.AuditLog.AnyAsync(a => a.ActorEmail == "pg-erase@example.org"));
+        Assert.True(await h.Db.AuditLog.AnyAsync(a => a.Action == "account.erased_self" && a.ActorUserId == user.Id));
+        Assert.Equal(Severity.FirstAidOnly, (await h.Db.Incidents.SingleAsync(i => i.EventName == "Pg Erase Shared")).Severity);
+    }
+
+    [PgFact]
     public async Task Merge_and_split_work_on_postgres()
     {
         using var h = new TestHost(_pg.ConnectionString);

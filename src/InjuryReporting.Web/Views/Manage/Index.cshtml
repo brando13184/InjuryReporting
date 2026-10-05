@@ -27,6 +27,7 @@
             <div class="list-group list-group-flush">
                 <a class="list-group-item list-group-item-action" asp-action="ChangePassword">Change password</a>
                 <a class="list-group-item list-group-item-action" asp-action="ChangeEmail">Change email address</a>
+                <a class="list-group-item list-group-item-action" asp-action="DownloadMyData">Download my data</a>
                 <a class="list-group-item list-group-item-action d-flex justify-content-between" asp-action="TwoFactor">
                     Two-factor authentication
                     <span class="badge @(Model.TwoFactorEnabled ? "text-bg-success" : "text-bg-secondary")">@(Model.TwoFactorEnabled ? "On" : "Off")</span>

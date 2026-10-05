@@ -122,6 +122,33 @@ public class NewFeatureWebTests : IClassFixture<AppFactory>
         return (c, id);
     }
 
+    private const string StaffPassword = "Another-Long-Passw0rd";
+
+    /// <summary>A fresh staff user (so tests never share/flip the seeded admin), signed in with 2FA still off.</summary>
+    private async Task<HttpClient> SignedInStaff(string email, string role)
+    {
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var users = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>();
+            var u = new ApplicationUser { Id = Guid.NewGuid(), UserName = email, Email = email, EmailConfirmed = true, DisplayName = "Staff" };
+            Assert.True((await users.CreateAsync(u, StaffPassword)).Succeeded);
+            await users.AddToRoleAsync(u, role);
+        }
+        var c = _factory.NewClient();
+        Assert.Equal(HttpStatusCode.Redirect, (await c.PostAsync("/Account/Login", Form(
+            ("__RequestVerificationToken", await Token(c, "/Account/Login")), ("Email", email), ("Password", StaffPassword)))).StatusCode);
+        return c;
+    }
+
+    /// <summary>Marks 2FA enabled in the store; the live session carries on (the TOTP ceremony is tested separately).</summary>
+    private async Task EnableTwoFactorDirectly(string email)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await db.Users.SingleAsync(x => x.Email == email)).TwoFactorEnabled = true;
+        await db.SaveChangesAsync();
+    }
+
     [Fact]
     public async Task Owner_can_edit_narrative_but_not_after_the_window_and_not_others_reports()
     {
@@ -179,7 +206,8 @@ public class NewFeatureWebTests : IClassFixture<AppFactory>
         Assert.Equal(HttpStatusCode.OK, bad.StatusCode);
 
         var ok = await c.PostAsync("/Manage/DeleteAccount", Form(
-            ("__RequestVerificationToken", await Token(c, "/Manage/DeleteAccount")), ("CurrentPassword", "Another-Long-Passw0rd"), ("Confirm", "true")));
+            ("__RequestVerificationToken", await Token(c, "/Manage/DeleteAccount")), ("CurrentPassword", "Another-Long-Passw0rd"),
+            ("DeleteReports", "false"), ("Confirm", "true")));
         Assert.Equal(HttpStatusCode.Redirect, ok.StatusCode);
 
         using var scope = _factory.Services.CreateScope();
@@ -187,7 +215,90 @@ public class NewFeatureWebTests : IClassFixture<AppFactory>
         Assert.False(await db.Users.AnyAsync(u => u.Id == uid));
         var report = await db.Reports.SingleAsync(r => r.EventName == "Leaver War");
         Assert.Null(report.ReporterUserId);                                   // kept, but now anonymous
-        Assert.True(await db.AuditLog.AnyAsync(a => a.Action == "account.deleted" && a.ActorUserId == uid));
+        Assert.True(await db.AuditLog.AnyAsync(a => a.Action == "account.erased_self" && a.ActorUserId == uid));
+    }
+
+    [Fact]
+    public async Task User_can_download_their_data_and_delete_everything_including_reports()
+    {
+        var (c, uid) = await SignedInUser("everything@example.org");
+        await c.PostAsync("/Reports/Create", Form(
+            ("__RequestVerificationToken", await Token(c, "/Reports/Create")),
+            ("SubmissionToken", Guid.NewGuid().ToString()), ("DisciplineId", "4"), ("InjuryTypeId", "5"), ("Severity", "FirstAidOnly"),
+            ("InjuryDate", "2026-02-02"), ("EventName", "Erase All War"), ("EventKingdomId", "7"), ("InjuredKingdomId", ""),
+            ("Narrative", "Narrative-marker-plumbus about my own injury.")));
+
+        var dl = await c.GetAsync("/Manage/DownloadMyData");
+        Assert.Equal(HttpStatusCode.OK, dl.StatusCode);
+        Assert.Equal("application/json", dl.Content.Headers.ContentType!.MediaType);
+        var json = await dl.Content.ReadAsStringAsync();
+        Assert.Contains("plumbus", json);                    // their narrative is in the export...
+        Assert.Contains("everything@example.org", json);
+        Assert.DoesNotContain("PasswordHash", json, StringComparison.OrdinalIgnoreCase);   // ...secrets are not
+        Assert.DoesNotContain("SecurityStamp", json, StringComparison.OrdinalIgnoreCase);
+
+        var del = await c.PostAsync("/Manage/DeleteAccount", Form(
+            ("__RequestVerificationToken", await Token(c, "/Manage/DeleteAccount")), ("CurrentPassword", "Another-Long-Passw0rd"),
+            ("DeleteReports", "true"), ("Confirm", "true")));
+        Assert.Equal(HttpStatusCode.Redirect, del.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.False(await db.Users.AnyAsync(u => u.Id == uid));
+        Assert.False(await db.Reports.AnyAsync(r => r.EventName == "Erase All War"));
+        Assert.False(await db.Incidents.AnyAsync(i => i.EventName == "Erase All War"));
+        // Personal data is gone from the audit trail but the rows (and the erasure event) remain.
+        Assert.False(await db.AuditLog.AnyAsync(a => a.ActorEmail == "everything@example.org"));
+        Assert.True(await db.AuditLog.AnyAsync(a => a.Action == "account.erased_self" && a.ActorUserId == uid && a.ActorEmail == null && a.IpAddress == null));
+    }
+
+    [Fact]
+    public async Task Super_admin_can_retrieve_and_delete_another_user_with_all_their_data()
+    {
+        // A target user with a report.
+        var (tc, targetId) = await SignedInUser("target@example.org");
+        await tc.PostAsync("/Reports/Create", Form(
+            ("__RequestVerificationToken", await Token(tc, "/Reports/Create")),
+            ("SubmissionToken", Guid.NewGuid().ToString()), ("DisciplineId", "5"), ("InjuryTypeId", "3"), ("Severity", "Hospitalization"),
+            ("InjuryDate", "2026-01-15"), ("EventName", "Admin Erase War"), ("EventKingdomId", "8"), ("InjuredKingdomId", ""),
+            ("Narrative", "Narrative-marker-gazorpazorp for the admin export.")));
+
+        var c = await SignedInStaff("sa-eraser@example.org", "SuperAdmin");
+        await EnableTwoFactorDirectly("sa-eraser@example.org");
+
+        // Retrieve.
+        var export = await c.GetAsync($"/Users/ExportData/{targetId}");
+        Assert.Equal(HttpStatusCode.OK, export.StatusCode);
+        Assert.Contains("gazorpazorp", await export.Content.ReadAsStringAsync());
+
+        var page = await c.GetStringAsync($"/Users/Details/{targetId}");
+        Assert.Contains("Permanently delete user", page);
+        var token = Regex.Match(page, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
+
+        // Guards: wrong password and wrong typed email change nothing.
+        await c.PostAsync("/Users/DeleteUser", Form(("__RequestVerificationToken", token), ("Id", targetId.ToString()),
+            ("ConfirmEmail", "target@example.org"), ("AdminPassword", "not-my-password"), ("DeleteReports", "true")));
+        await c.PostAsync("/Users/DeleteUser", Form(("__RequestVerificationToken", token), ("Id", targetId.ToString()),
+            ("ConfirmEmail", "someone-else@example.org"), ("AdminPassword", StaffPassword), ("DeleteReports", "true")));
+        using (var scope = _factory.Services.CreateScope())
+            Assert.True(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.AnyAsync(u => u.Id == targetId));
+
+        // Delete for real.
+        var del = await c.PostAsync("/Users/DeleteUser", Form(("__RequestVerificationToken", token), ("Id", targetId.ToString()),
+            ("ConfirmEmail", "TARGET@example.org"), ("AdminPassword", StaffPassword), ("DeleteReports", "true")));
+        Assert.Equal(HttpStatusCode.Redirect, del.StatusCode);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.False(await db.Users.AnyAsync(u => u.Id == targetId));
+            Assert.False(await db.Reports.AnyAsync(r => r.EventName == "Admin Erase War"));
+            Assert.True(await db.AuditLog.AnyAsync(a => a.Action == "account.erased_by_admin" && a.EntityId == targetId.ToString()));
+            Assert.True(await db.AuditLog.AnyAsync(a => a.Action == "user.data_exported"));
+        }
+
+        // A regular (non-super) admin cannot use either action.
+        var (plain, _) = await SignedInUser("plainuser@example.org");
+        Assert.Equal(HttpStatusCode.Redirect, (await plain.GetAsync($"/Users/ExportData/{targetId}")).StatusCode);   // login/denied
     }
 
     /// <summary>RFC 6238 TOTP (SHA-1, 30 s, 6 digits) from Identity's base32 authenticator key.</summary>
@@ -251,20 +362,13 @@ public class NewFeatureWebTests : IClassFixture<AppFactory>
     [Fact]
     public async Task Two_factor_setup_shows_a_qr_code_and_staff_pages_for_new_features_render()
     {
-        var c = _factory.NewClient();
-        await c.PostAsync("/Account/Login", Form(
-            ("__RequestVerificationToken", await Token(c, "/Account/Login")), ("Email", AppFactory.AdminEmail), ("Password", AppFactory.AdminPassword)));
+        var c = await SignedInStaff("qr-staff@example.org", "SuperAdmin");
 
         var tf = await c.GetStringAsync("/Manage/TwoFactor");
         Assert.Contains("<svg", tf);
         Assert.Contains("shape-rendering", tf);
 
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            (await db.Users.SingleAsync(x => x.Email == AppFactory.AdminEmail)).TwoFactorEnabled = true;
-            await db.SaveChangesAsync();
-        }
+        await EnableTwoFactorDirectly("qr-staff@example.org");
 
         foreach (var url in new[] { "/Lookups", "/Lookups?kind=kingdoms", "/Lookups?kind=injury-types", "/Analytics?HideSmallCounts=true",
                      "/Analytics/ExportSummaryCsv" })

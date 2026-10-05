@@ -1,15 +1,28 @@
 @model DeleteAccountModel
 @{ ViewData["Title"] = "Delete account"; }
 <div class="row justify-content-center"><div class="col-md-8 col-lg-6">
+    <div class="alert alert-light border">
+        Want a copy first? <a asp-action="DownloadMyData">Download my data</a> (profile, reports you filed while signed in, and your account activity, as a JSON file).
+        Reports submitted anonymously aren't linked to you, so they can't be included.
+    </div>
     <div class="card border-danger"><div class="card-body p-4">
         <h1 class="h4 mb-3 text-danger">Delete my account</h1>
-        <ul>
-            <li>Your sign-in, profile and settings are permanently removed.</li>
-            <li>Reports you filed stay in the safety statistics but are <strong>no longer linked to you</strong> (they become anonymous), and you won't be able to see or edit them.</li>
-            <li>A record that the account was deleted is kept in the audit log.</li>
-        </ul>
+        <p>This permanently removes your sign-in, profile and settings. It can't be undone. Your email and IP address are also erased from the security audit log; a record that the deletion happened is kept without them.</p>
         <form asp-action="DeleteAccount" method="post" novalidate>
             <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <fieldset class="mb-3">
+                <legend class="h6">What should happen to the reports I filed while signed in?</legend>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="DeleteReports" id="del-yes" value="true" checked="@Model.DeleteReports" />
+                    <label class="form-check-label" for="del-yes"><strong>Delete them too</strong> &mdash; the narratives and details are erased and removed from the safety statistics (if someone else reported the same incident, that incident stays).</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="DeleteReports" id="del-no" value="false" checked="@(!Model.DeleteReports)" />
+                    <label class="form-check-label" for="del-no"><strong>Keep them, anonymously</strong> &mdash; they stay in the safety statistics but nothing links them to me any more.</label>
+                </div>
+            </fieldset>
+
             <div class="mb-3">
                 <label asp-for="CurrentPassword" class="form-label"></label>
                 <input asp-for="CurrentPassword" class="form-control" autocomplete="current-password" />
@@ -23,6 +36,7 @@
             <button type="submit" class="btn btn-danger">Delete my account</button>
             <a class="btn btn-link" asp-action="Index">Cancel</a>
         </form>
+        <p class="small text-muted mt-3 mb-0">Encrypted backups made before today's deletion expire on their own (daily copies after 35 days, monthly after about 13 months). Server logs are rotated within 90 days.</p>
     </div></div>
 </div></div>
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

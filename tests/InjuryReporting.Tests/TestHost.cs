@@ -9,6 +9,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace InjuryReporting.Tests;
 
+public sealed class NullEmailSender : IAppEmailSender
+{
+    public List<(string To, string Subject)> Sent { get; } = new();
+    public Task SendAsync(string toEmail, string subject, string htmlBody) { Sent.Add((toEmail, subject)); return Task.CompletedTask; }
+}
+
 /// <summary>Real EF model + constraints on in-memory SQLite, with the same services the app registers.</summary>
 public sealed class TestHost : IDisposable
 {
@@ -40,6 +46,8 @@ public sealed class TestHost : IDisposable
         services.AddScoped<IIncidentService, IncidentService>();
         services.AddScoped<IAnalyticsService, AnalyticsService>();
         services.AddScoped<IUserAdminService, UserAdminService>();
+        services.AddScoped<IUserDataService, UserDataService>();
+        services.AddSingleton<IAppEmailSender, NullEmailSender>();
         _root = services.BuildServiceProvider();
         _scope = _root.CreateScope();
         if (postgresConnection == null) Db.Database.EnsureCreated();

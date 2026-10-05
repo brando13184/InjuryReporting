@@ -50,6 +50,23 @@
 
         @if (Model.ViewerIsSuperAdmin)
         {
+            <div class="card mb-3 border-danger"><div class="card-header">Retrieve or delete data (Super Admin only)</div><div class="card-body">
+                <p class="small">Retrieve everything held about this user as a JSON file: profile, reports filed under their account, and their account activity. Logged.</p>
+                <a class="btn btn-outline-secondary btn-sm mb-3" asp-action="ExportData" asp-route-id="@u.Id">Retrieve data (JSON)</a>
+                <hr />
+                <p class="small mb-2"><strong>Delete this user and their data.</strong> This is permanent. Their sign-in and profile are removed and their email and IP are erased from the audit log (the event itself stays).</p>
+                <form asp-action="DeleteUser" method="post">
+                    <input type="hidden" name="Id" value="@u.Id" />
+                    <div class="form-check"><input class="form-check-input" type="radio" name="DeleteReports" id="ud-yes" value="true" checked /><label class="form-check-label small" for="ud-yes">Also delete every report filed under their account</label></div>
+                    <div class="form-check mb-2"><input class="form-check-input" type="radio" name="DeleteReports" id="ud-no" value="false" /><label class="form-check-label small" for="ud-no">Keep their reports in the statistics, unlinked</label></div>
+                    <label for="ConfirmEmail" class="form-label small">Type <span class="mono">@u.Email</span> to confirm</label>
+                    <input id="ConfirmEmail" name="ConfirmEmail" class="form-control form-control-sm mb-2" autocomplete="off" required />
+                    <label for="AdminPassword" class="form-label small">Your password</label>
+                    <input id="AdminPassword" name="AdminPassword" type="password" class="form-control form-control-sm mb-2" autocomplete="current-password" required />
+                    <button type="submit" class="btn btn-danger btn-sm">Permanently delete user</button>
+                </form>
+            </div></div>
+
             <div class="card"><div class="card-header">Role (Super Admin only)</div><div class="card-body">
                 <form asp-action="SetRole" method="post" class="row g-2 align-items-end">
                     <input type="hidden" name="id" value="@u.Id" />

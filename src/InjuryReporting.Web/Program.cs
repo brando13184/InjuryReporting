@@ -76,10 +76,12 @@ builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     static string Ip(HttpContext c) => c.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    var reportsPerHour = config.GetValue("RateLimit:ReportsPerHour", 10);
+    var authPerMinute = config.GetValue("RateLimit:AuthPerMinute", 20);
     o.AddPolicy("report", c => RateLimitPartition.GetFixedWindowLimiter(Ip(c),
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromHours(1) }));
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = reportsPerHour, Window = TimeSpan.FromHours(1) }));
     o.AddPolicy("auth", c => RateLimitPartition.GetFixedWindowLimiter(Ip(c),
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1) }));
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = authPerMinute, Window = TimeSpan.FromMinutes(1) }));
 });
 
 // ---- App services --------------------------------------------------------------------------
@@ -91,6 +93,7 @@ builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IIncidentService, IncidentService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IUserAdminService, UserAdminService>();
+builder.Services.AddScoped<IUserDataService, UserDataService>();
 builder.Services.AddScoped<LookupService>();
 builder.Services.AddScoped<StaffMfaFilter>();
 builder.Services.AddHostedService<StartupTasks>();

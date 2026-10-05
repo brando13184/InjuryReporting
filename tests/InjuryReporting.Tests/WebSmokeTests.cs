@@ -26,7 +26,10 @@ public class AppFactory : WebApplicationFactory<Program>
             ["ConnectionStrings:Default"] = "Host=unused",
             ["Database:MigrateOnStartup"] = "false",
             ["Seed:SuperAdminEmail"] = AdminEmail,
-            ["Seed:SuperAdminPassword"] = AdminPassword
+            ["Seed:SuperAdminPassword"] = AdminPassword,
+            // Tests drive many sign-ins from one IP in seconds; production limits are covered by their own test below.
+            ["RateLimit:AuthPerMinute"] = "100000",
+            ["RateLimit:ReportsPerHour"] = "100000"
         }));
         builder.ConfigureServices(services =>
         {

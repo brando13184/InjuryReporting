@@ -99,6 +99,19 @@ public class UserDetailsModel
     public bool IsSelf { get; init; }
 }
 
+public class DeleteUserModel
+{
+    [Required] public Guid Id { get; set; }
+
+    [Required, Display(Name = "Type the user's email to confirm")]
+    public string ConfirmEmail { get; set; } = "";
+
+    [Required, DataType(DataType.Password), Display(Name = "Your password")]
+    public string AdminPassword { get; set; } = "";
+
+    public bool DeleteReports { get; set; } = true;
+}
+
 public class SuspendModel
 {
     public Guid Id { get; set; }

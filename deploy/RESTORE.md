@@ -27,6 +27,12 @@
 5. Re-grant app permissions: run `deploy/release.sh` (it re-applies grants) or the GRANT block inside it.
 6. `sudo systemctl restart injuryreporting` and check the site, then sign in.
 
+## After any restore: re-apply erasures
+A restored backup brings back people who were erased after it was taken. Look at the *live* system's record before you
+overwrite it (or in a snapshot/archive taken after those deletions): audit rows with action `account.erased_self` or
+`account.erased_by_admin` list the user ids (`EntityId`). For each, delete the account and its reports again from
+*Users* (Super Admin) if the person still exists in the restored data.
+
 ## Restore the whole machine
 Lightsail console → the instance → Snapshots → pick an automatic snapshot → *Create new instance*. Attach the static IP
 (54.226.80.38) to the new instance. Anything written after the snapshot (up to 24 h) comes from the S3 archive above.

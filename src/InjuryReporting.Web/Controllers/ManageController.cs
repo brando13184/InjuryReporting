@@ -19,11 +19,12 @@ public class ManageController : AppController
     private readonly IAppEmailSender _email;
     private readonly IAuditService _audit;
     private readonly LookupService _lookups;
+    private readonly IUserDataService _data;
 
     public ManageController(UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn,
-        IAppEmailSender email, IAuditService audit, LookupService lookups)
+        IAppEmailSender email, IAuditService audit, LookupService lookups, IUserDataService data)
     {
-        _users = users; _signIn = signIn; _email = email; _audit = audit; _lookups = lookups;
+        _users = users; _signIn = signIn; _email = email; _audit = audit; _lookups = lookups; _data = data;
     }
 
     // ---- Profile ------------------------------------------------------------------------------
@@ -200,10 +201,21 @@ public class ManageController : AppController
     [HttpGet]
     public IActionResult DeleteAccount() => View(new DeleteAccountModel());
 
+    /// <summary>Retrieve everything held about the signed-in user (profile, filed reports, account activity) as JSON.</summary>
+    [HttpGet]
+    public async Task<IActionResult> DownloadMyData()
+    {
+        var user = await _users.GetUserAsync(User);
+        if (user == null) return Challenge();
+        var bytes = await _data.ExportAsync(user.Id);
+        await _audit.LogAsync("user.data_exported", "User", user.Id.ToString(), "self-service");
+        return File(bytes, "application/json", $"my-injury-reporting-data-{DateTime.UtcNow:yyyyMMdd}.json");
+    }
+
     /// <summary>
-    /// Self-service erasure. The account, its sign-in and personal profile are removed. Reports already filed
-    /// stay (they feed safety statistics) but lose their link to the person, i.e. they become anonymous.
-    /// The audit trail is append-only and keeps the event, as required for SOC2.
+    /// Self-service erasure. The account, sign-in and profile are removed. The user chooses whether the reports filed
+    /// under the account are deleted too (default) or kept in the safety statistics, unlinked and anonymous.
+    /// Personal data in the audit trail (actor e-mail, IP) is blanked; the event itself stays, as SOC2 requires.
     /// </summary>
     [HttpPost]
     public async Task<IActionResult> DeleteAccount(DeleteAccountModel model)
@@ -219,28 +231,16 @@ public class ManageController : AppController
             return View(model);
         }
 
-        if (await _users.IsInRoleAsync(user, Security.AppRoles.SuperAdmin))
-        {
-            var others = (await _users.GetUsersInRoleAsync(Security.AppRoles.SuperAdmin)).Count(u => u.Id != user.Id && !u.IsSuspended);
-            if (others == 0)
-            {
-                ModelState.AddModelError("", "You're the only active Super Admin. Promote another Super Admin before deleting this account.");
-                return View(model);
-            }
-        }
-
-        var email = user.Email!;
-        await _audit.LogAsync("account.deleted", "User", user.Id.ToString(), "self-service; filed reports kept but unlinked");
-        var result = await _users.DeleteAsync(user);
+        var result = await _data.EraseAsync(user.Id, user.Id, model.DeleteReports);
         if (!result.Succeeded)
         {
-            foreach (var e in result.Errors) ModelState.AddModelError("", e.Description);
+            ModelState.AddModelError("", result.Error!);
             return View(model);
         }
         await _signIn.SignOutAsync();
-        await _email.SendAsync(email, "Your Injury Reporting account was deleted",
-            "<p>Your account has been deleted. Reports you filed remain in the safety statistics but are no longer linked to you.</p>");
-        TempData["Success"] = "Your account has been deleted.";
+        TempData["Success"] = model.DeleteReports
+            ? "Your account and the reports filed under it have been deleted."
+            : "Your account has been deleted. Reports you filed remain, no longer linked to you.";
         return RedirectToAction("Index", "Home");
     }
 

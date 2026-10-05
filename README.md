@@ -35,7 +35,8 @@ dotnet dotnet-ef migrations add <Name> --project src/InjuryReporting.Web --outpu
 | Users & roles | Email login. Roles: `User`, `Admin`, `SuperAdmin`. Admins review/merge incidents, see analytics, and suspend/reinstate plain users. Super Admins also grant roles and see the audit log. Users can change password and (with confirmation) email. |
 | Analytics | Monthly trend chart (SVG, gap-filled), year-over-year grid, by discipline / injury type / severity / year / event kingdom / injured person's kingdom, discipline × injury-type matrix, filters. **"Hide counts under 5"** suppresses small cells; the *shareable summary* CSV always does. The incident-row CSV is internal only. |
 | Pick lists | Staff can add, rename and deactivate kingdoms, disciplines and injury types (never delete, so history stays meaningful). Inactive entries leave the public form but still show on old records. |
-| Self-service | Reporters can correct their report's **narrative** for 7 days (never the fields that drive duplicate matching). Users can **delete their account**: sign-in and profile are removed, filed reports stay but become anonymous, and the audit log keeps the event. 2FA setup shows a QR code. |
+| Self-service | Reporters can correct their report's **narrative** for 7 days (never the fields that drive duplicate matching). 2FA setup shows a QR code. |
+| Retrieve & erase | Every user can **download their data** (JSON: profile, reports filed while signed in, account activity; never password hashes or tokens) and **delete their account**, choosing to delete their reports too (default) or keep them anonymously. **Super Admins** can do the same for any user from *Users → user*, guarded by their own password and the user's email typed back. Both are audited. See *Data erasure* below. |
 
 ### Avoiding duplicate and circular reporting
 
@@ -63,6 +64,13 @@ Mapped loosely to SOC 2 Trust Services Criteria / HIPAA Security Rule safeguards
 2. Set `DataProtection:CertificatePath` (+ password via secret store), `App:PublicBaseUrl`, `Smtp:*`, and `Proxy:KnownProxies` if behind a load balancer. Set `Database:MigrateOnStartup=false` in prod.
 3. Keep secrets in a vault / environment, not `appsettings`. Remove `Seed:SuperAdminPassword` after first boot.
 4. SOC 2 / HIPAA also need organisational controls: BAAs with hosting/email vendors, centralised log shipping and alerting from the audit table, retention/deletion policy, access reviews, backup restore tests, pen testing, incident response.
+
+### Data erasure
+
+* Erasing a user deletes the account (sign-in, roles, tokens, profile) in one transaction. With *delete reports* chosen, their reports are deleted too; an incident left with no reports is removed (with its retired merge tombstones), and an incident shared with other reporters stays with its severity recomputed.
+* **Audit log:** the event is recorded with pseudonymous ids only, then the person's **actor email and IP are blanked** in every audit row about them. The database trigger allows exactly that one change (those two columns set to NULL); every other update, and all deletes, are still rejected, so the trail stays tamper-evident. The user id left behind identifies no one once the account is gone.
+* **Not erasable by account:** reports submitted anonymously (nothing links them to a person, by design).
+* **Backups and logs:** erased data remains in encrypted backups until they expire (daily 35 days, monthly ~13 months) and in Lightsail snapshots (7 days); nginx logs rotate in about 2 weeks, the journal within 90 days, the mail log within 8 weeks. If you ever restore from a backup, re-run erasure for anyone deleted since that backup was taken (the audit trail's `account.erased_*` events list them).
 
 ### Operations (`deploy/`)
 

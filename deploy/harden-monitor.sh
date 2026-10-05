@@ -96,6 +96,9 @@ ALERT_FROM=$SMTP_FROM
 EOF
 chmod 640 /etc/injuryreporting/alerts.conf; chown root:injuryapp /etc/injuryreporting/alerts.conf
 
+echo "== rotate the mail log (it records recipient addresses) -- 8 weekly files max"
+install -m 644 "$HERE/ops/msmtp-logrotate.conf" /etc/logrotate.d/msmtp-injuryreporting
+
 echo "== monitor scripts + timers"
 install -m 755 "$HERE/ops/ir-notify.sh" /usr/local/bin/ir-notify
 install -m 755 "$HERE/ops/ir-healthcheck.sh" /usr/local/bin/ir-healthcheck

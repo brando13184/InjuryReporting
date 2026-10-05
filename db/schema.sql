@@ -628,3 +628,37 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005022105_AuditPiiErasure') THEN
+    CREATE OR REPLACE FUNCTION audit_log_append_only() RETURNS trigger AS $$
+    BEGIN
+        IF TG_OP = 'UPDATE'
+           AND NEW."Id"           IS NOT DISTINCT FROM OLD."Id"
+           AND NEW."TimestampUtc" IS NOT DISTINCT FROM OLD."TimestampUtc"
+           AND NEW."ActorUserId"  IS NOT DISTINCT FROM OLD."ActorUserId"
+           AND NEW."Action"       IS NOT DISTINCT FROM OLD."Action"
+           AND NEW."EntityType"   IS NOT DISTINCT FROM OLD."EntityType"
+           AND NEW."EntityId"     IS NOT DISTINCT FROM OLD."EntityId"
+           AND NEW."Detail"       IS NOT DISTINCT FROM OLD."Detail"
+           AND NEW."ActorEmail"   IS NULL
+           AND NEW."IpAddress"    IS NULL THEN
+            RETURN NEW;
+        END IF;
+        RAISE EXCEPTION 'AuditLog is append-only (only the actor e-mail and IP address may be erased)';
+    END;
+    $$ LANGUAGE plpgsql;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261005022105_AuditPiiErasure') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261005022105_AuditPiiErasure', '10.0.12');
+    END IF;
+END $EF$;
+COMMIT;
+
