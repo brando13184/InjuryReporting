@@ -122,8 +122,10 @@ public class DeleteAccountModel
     [Display(Name = "Current password")]
     public string CurrentPassword { get; set; } = "";
 
-    /// <summary>true = also permanently delete every report filed under this account; false = keep them, unlinked.</summary>
-    public bool DeleteReports { get; set; } = true;
+    /// <summary>Checkbox: true = also permanently delete every report filed under this account; false = keep them, unlinked.
+    /// Defaults to false when the field is absent, so a missing value can never delete data by accident.</summary>
+    [Display(Name = "Also permanently delete the reports I filed")]
+    public bool DeleteReports { get; set; }
 
     [Range(typeof(bool), "true", "true", ErrorMessage = "Tick the box to confirm.")]
     [Display(Name = "I understand this can't be undone")]

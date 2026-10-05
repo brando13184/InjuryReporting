@@ -36,7 +36,7 @@ dotnet dotnet-ef migrations add <Name> --project src/InjuryReporting.Web --outpu
 | Analytics | Monthly trend chart (SVG, gap-filled), year-over-year grid, by discipline / injury type / severity / year / event kingdom / injured person's kingdom, discipline × injury-type matrix, filters. **"Hide counts under 5"** suppresses small cells; the *shareable summary* CSV always does. The incident-row CSV is internal only. |
 | Pick lists | Staff can add, rename and deactivate kingdoms, disciplines and injury types (never delete, so history stays meaningful). Inactive entries leave the public form but still show on old records. |
 | Self-service | Reporters can correct their report's **narrative** for 7 days (never the fields that drive duplicate matching). 2FA setup shows a QR code. |
-| Retrieve & erase | Every user can **download their data** (JSON: profile, reports filed while signed in, account activity; never password hashes or tokens) and **delete their account**, choosing to delete their reports too (default) or keep them anonymously. **Super Admins** can do the same for any user from *Users → user*, guarded by their own password and the user's email typed back. Both are audited. See *Data erasure* below. |
+| Retrieve & erase | Every user can **download their data** (JSON: profile, reports filed while signed in, account activity; never password hashes or tokens) and **delete their account**, with a checkbox (ticked by default) to also delete the reports they filed, or untick it to keep them anonymously. **Super Admins** can do the same for any user from *Users → user*, guarded by their own password and the user's email typed back. Both are audited. See *Data erasure* below. |
 
 ### Avoiding duplicate and circular reporting
 

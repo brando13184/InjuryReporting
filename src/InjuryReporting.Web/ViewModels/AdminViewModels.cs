@@ -109,7 +109,8 @@ public class DeleteUserModel
     [Required, DataType(DataType.Password), Display(Name = "Your password")]
     public string AdminPassword { get; set; } = "";
 
-    public bool DeleteReports { get; set; } = true;
+    /// <summary>Checkbox; false when absent, so a missing value never deletes reports.</summary>
+    public bool DeleteReports { get; set; }
 }
 
 public class SuspendModel

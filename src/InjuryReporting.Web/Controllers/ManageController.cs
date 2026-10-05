@@ -199,7 +199,7 @@ public class ManageController : AppController
     // ---- Delete account -----------------------------------------------------------------------
 
     [HttpGet]
-    public IActionResult DeleteAccount() => View(new DeleteAccountModel());
+    public IActionResult DeleteAccount() => View(new DeleteAccountModel { DeleteReports = true });   // box ticked by default
 
     /// <summary>Retrieve everything held about the signed-in user (profile, filed reports, account activity) as JSON.</summary>
     [HttpGet]

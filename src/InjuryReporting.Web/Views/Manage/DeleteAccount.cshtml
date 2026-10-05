@@ -11,17 +11,14 @@
         <form asp-action="DeleteAccount" method="post" novalidate>
             <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
-            <fieldset class="mb-3">
-                <legend class="h6">What should happen to the reports I filed while signed in?</legend>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="DeleteReports" id="del-yes" value="true" checked="@Model.DeleteReports" />
-                    <label class="form-check-label" for="del-yes"><strong>Delete them too</strong> &mdash; the narratives and details are erased and removed from the safety statistics (if someone else reported the same incident, that incident stays).</label>
+            <div class="form-check mb-3">
+                <input asp-for="DeleteReports" class="form-check-input" />
+                <label asp-for="DeleteReports" class="form-check-label"></label>
+                <div class="form-text">
+                    <strong>Ticked:</strong> the narratives and details are erased and removed from the safety statistics (if someone else reported the same incident, that incident stays).<br />
+                    <strong>Unticked:</strong> the reports stay in the safety statistics, but nothing links them to me any more.
                 </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="DeleteReports" id="del-no" value="false" checked="@(!Model.DeleteReports)" />
-                    <label class="form-check-label" for="del-no"><strong>Keep them, anonymously</strong> &mdash; they stay in the safety statistics but nothing links them to me any more.</label>
-                </div>
-            </fieldset>
+            </div>
 
             <div class="mb-3">
                 <label asp-for="CurrentPassword" class="form-label"></label>

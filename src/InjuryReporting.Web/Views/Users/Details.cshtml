@@ -57,8 +57,11 @@
                 <p class="small mb-2"><strong>Delete this user and their data.</strong> This is permanent. Their sign-in and profile are removed and their email and IP are erased from the audit log (the event itself stays).</p>
                 <form asp-action="DeleteUser" method="post">
                     <input type="hidden" name="Id" value="@u.Id" />
-                    <div class="form-check"><input class="form-check-input" type="radio" name="DeleteReports" id="ud-yes" value="true" checked /><label class="form-check-label small" for="ud-yes">Also delete every report filed under their account</label></div>
-                    <div class="form-check mb-2"><input class="form-check-input" type="radio" name="DeleteReports" id="ud-no" value="false" /><label class="form-check-label small" for="ud-no">Keep their reports in the statistics, unlinked</label></div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="DeleteReports" id="ud-reports" value="true" checked />
+                        <input type="hidden" name="DeleteReports" value="false" />
+                        <label class="form-check-label small" for="ud-reports">Also permanently delete every report filed under their account<br /><span class="text-muted">Unticked: their reports stay in the statistics, unlinked.</span></label>
+                    </div>
                     <label for="ConfirmEmail" class="form-label small">Type <span class="mono">@u.Email</span> to confirm</label>
                     <input id="ConfirmEmail" name="ConfirmEmail" class="form-control form-control-sm mb-2" autocomplete="off" required />
                     <label for="AdminPassword" class="form-label small">Your password</label>

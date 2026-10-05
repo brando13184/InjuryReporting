@@ -149,6 +149,80 @@ public class NewFeatureWebTests : IClassFixture<AppFactory>
         await db.SaveChangesAsync();
     }
 
+    private static FormUrlEncodedContent Pairs(params (string, string)[] kv) =>
+        new(kv.Select(x => new KeyValuePair<string, string>(x.Item1, x.Item2)));
+
+    private async Task FileReport(HttpClient c, string eventName) =>
+        await c.PostAsync("/Reports/Create", Form(
+            ("__RequestVerificationToken", await Token(c, "/Reports/Create")),
+            ("SubmissionToken", Guid.NewGuid().ToString()), ("DisciplineId", "2"), ("InjuryTypeId", "4"), ("Severity", "FirstAidOnly"),
+            ("InjuryDate", "2026-03-03"), ("EventName", eventName), ("EventKingdomId", "9"), ("InjuredKingdomId", ""),
+            ("Narrative", "A narrative for the checkbox test.")));
+
+    private async Task<bool> ReportExists(string eventName)
+    {
+        using var scope = _factory.Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Reports.AnyAsync(r => r.EventName == eventName);
+    }
+
+    [Fact]
+    public async Task Delete_reports_checkbox_binds_the_way_browsers_submit_it_and_a_missing_value_never_deletes()
+    {
+        // The self-service page offers the checkbox, ticked by default.
+        var (probe, _) = await SignedInUser("probe@example.org");
+        var page = await probe.GetStringAsync("/Manage/DeleteAccount");
+        Assert.Matches("<input[^>]*type=\"checkbox\"[^>]*name=\"DeleteReports\"[^>]*checked|<input[^>]*checked[^>]*name=\"DeleteReports\"", page);
+
+        async Task<bool> DeleteSelf(string email, string eventName, params (string, string)[] reportsField)
+        {
+            var (c, _) = await SignedInUser(email);
+            await FileReport(c, eventName);
+            var fields = new List<(string, string)>
+            {
+                ("__RequestVerificationToken", await Token(c, "/Manage/DeleteAccount")),
+                ("CurrentPassword", "Another-Long-Passw0rd"), ("Confirm", "true")
+            };
+            fields.AddRange(reportsField);
+            var res = await c.PostAsync("/Manage/DeleteAccount", Pairs(fields.ToArray()));
+            Assert.Equal(HttpStatusCode.Redirect, res.StatusCode);
+            return await ReportExists(eventName);
+        }
+
+        // Ticked: browser sends the checkbox value and the hidden "false" -> reports deleted.
+        Assert.False(await DeleteSelf("ticked@example.org", "Ticked War", ("DeleteReports", "true"), ("DeleteReports", "false")));
+        // Unticked: only the hidden "false" -> reports kept.
+        Assert.True(await DeleteSelf("unticked@example.org", "Unticked War", ("DeleteReports", "false")));
+        // Field missing entirely (stale form / hand-crafted request) -> reports kept, never deleted by accident.
+        Assert.True(await DeleteSelf("missing@example.org", "Missing War"));
+
+        // Same three behaviours for the Super Admin panel.
+        var sa = await SignedInStaff("sa-checkbox@example.org", "SuperAdmin");
+        await EnableTwoFactorDirectly("sa-checkbox@example.org");
+        async Task<bool> AdminDelete(string email, string eventName, params (string, string)[] reportsField)
+        {
+            var (tc, tid) = await SignedInUser(email);
+            await FileReport(tc, eventName);
+            var token = Regex.Match(await sa.GetStringAsync($"/Users/Details/{tid}"), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
+            var fields = new List<(string, string)>
+            {
+                ("__RequestVerificationToken", token), ("Id", tid.ToString()), ("ConfirmEmail", email), ("AdminPassword", StaffPassword)
+            };
+            fields.AddRange(reportsField);
+            Assert.Equal(HttpStatusCode.Redirect, (await sa.PostAsync("/Users/DeleteUser", Pairs(fields.ToArray()))).StatusCode);
+            using var scope = _factory.Services.CreateScope();
+            Assert.False(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.AnyAsync(u => u.Id == tid));   // user always deleted
+            return await ReportExists(eventName);
+        }
+        Assert.False(await AdminDelete("at-ticked@example.org", "Admin Ticked War", ("DeleteReports", "true"), ("DeleteReports", "false")));
+        Assert.True(await AdminDelete("at-unticked@example.org", "Admin Unticked War", ("DeleteReports", "false")));
+        Assert.True(await AdminDelete("at-missing@example.org", "Admin Missing War"));
+
+        // The admin panel shows the checkbox too.
+        var (anyUser, anyId) = await SignedInUser("panel@example.org");
+        var adminPage = await sa.GetStringAsync($"/Users/Details/{anyId}");
+        Assert.Contains("type=\"checkbox\" name=\"DeleteReports\"", adminPage);
+    }
+
     [Fact]
     public async Task Owner_can_edit_narrative_but_not_after_the_window_and_not_others_reports()
     {
